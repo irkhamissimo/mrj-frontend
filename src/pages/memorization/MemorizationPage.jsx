@@ -4,6 +4,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 
+const formatDate = () => {
+  const options = { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  };
+  return new Date().toLocaleDateString('id-ID', options);
+};
+
 export default function MemorizationPage() {
   const [surahs, setSurahs] = useState([]);
   const [startSurah, setStartSurah] = useState(null);
@@ -169,6 +179,39 @@ export default function MemorizationPage() {
     }
   };
 
+  const handleFinishMemorization = async () => {
+    if (!currentEntry || completedSessions === 0) return;
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/memorizations/${currentEntry._id}/finish`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          confidenceLevel: 5, // Default to highest confidence
+          notes: "Completed memorization" // Default note
+        }),
+      });
+
+      if (response.ok) {
+        // Reset all states
+        setCurrentEntry(null);
+        setCompletedSessions(0);
+        setActiveSession(null);
+        setTimeElapsed(0);
+        setIsPaused(false);
+        setStartSurah(null);
+        setStartVerse("");
+        setEndSurah(null);
+        setEndVerse("");
+      }
+    } catch (error) {
+      console.error("Failed to finish memorization:", error);
+    }
+  };
+
   // Add cleanup when all sessions are completed
   useEffect(() => {
     if (completedSessions >= 4) {
@@ -186,7 +229,10 @@ export default function MemorizationPage() {
     <div className="min-h-screen bg-background p-8">
       <Card className="max-w-2xl mx-auto">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center">Ziyadah</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-2xl font-bold">Ziyadah</CardTitle>
+            <span className="text-sm text-muted-foreground">{formatDate()}</span>
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Timer and Session Indicators */}
@@ -314,15 +360,26 @@ export default function MemorizationPage() {
               </div>
             </div>
 
-            <Button
-              className="w-full"
-              onClick={activeSession ? handleTogglePause : handleStartMemorization}
-              disabled={(!startSurah || !startVerse || !endSurah || !endVerse) && !activeSession}
-            >
-              {activeSession 
-                ? (isPaused ? "Lanjutkan" : "Jeda") 
-                : "Mulai"}
-            </Button>
+            <div className="flex gap-4">
+              <Button
+                className="flex-1"
+                onClick={activeSession ? handleTogglePause : handleStartMemorization}
+                disabled={(!startSurah || !startVerse || !endSurah || !endVerse) && !activeSession}
+              >
+                {activeSession 
+                  ? (isPaused ? "Lanjutkan" : "Jeda") 
+                  : "Mulai"}
+              </Button>
+              
+              <Button
+                className="flex-1"
+                onClick={handleFinishMemorization}
+                disabled={completedSessions === 0}
+                variant="secondary"
+              >
+                Selesai
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
