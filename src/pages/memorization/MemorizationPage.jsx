@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { useNavigate } from "react-router-dom";
 
 const formatDate = () => {
   const options = { 
@@ -15,6 +16,7 @@ const formatDate = () => {
 };
 
 export default function MemorizationPage() {
+  const navigate = useNavigate();
   const [surahs, setSurahs] = useState([]);
   const [startSurah, setStartSurah] = useState(null);
   const [startVerse, setStartVerse] = useState("");
@@ -190,22 +192,15 @@ export default function MemorizationPage() {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify({
-          confidenceLevel: 5, // Default to highest confidence
-          notes: "Completed memorization" // Default note
+          confidenceLevel: 5,
+          notes: "Completed memorization"
         }),
       });
 
       if (response.ok) {
-        // Reset all states
-        setCurrentEntry(null);
-        setCompletedSessions(0);
-        setActiveSession(null);
-        setTimeElapsed(0);
-        setIsPaused(false);
-        setStartSurah(null);
-        setStartVerse("");
-        setEndSurah(null);
-        setEndVerse("");
+        const data = await response.json();
+        // Navigate to revision page with the entry ID
+        navigate(`/revision/${currentEntry._id}`);
       }
     } catch (error) {
       console.error("Failed to finish memorization:", error);
@@ -224,6 +219,30 @@ export default function MemorizationPage() {
       setEndVerse("");
     }
   }, [completedSessions]);
+
+  // Add effect to check for completed memorization
+  useEffect(() => {
+    const checkCompletedMemorization = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/memorizations/completed", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        const data = await response.json();
+        
+        // If there's a completed memorization, redirect to revision page
+        if (response.ok && data.length > 0) {
+          navigate(`/revision/${data[0]._id}`);
+          return;
+        }
+      } catch (error) {
+        console.error("Failed to check completed memorization:", error);
+      }
+    };
+
+    checkCompletedMemorization();
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-background p-8">
