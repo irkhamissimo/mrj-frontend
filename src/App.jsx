@@ -5,6 +5,7 @@ import RevisionPage from "./pages/revision/RevisionPage";
 import RevisionsListPage from "./pages/revision/RevisionsListPage";
 import PrivateRoute from "./components/PrivateRoute";
 import Layout from "./components/Layout";
+import VaultPage from "./pages/vault/VaultPage";
 
 function App() {
   return (
@@ -45,6 +46,16 @@ function App() {
             <PrivateRoute>
               <Layout>
                 <RevisionPage />
+              </Layout>
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/vault" 
+          element={
+            <PrivateRoute>
+              <Layout>
+                <VaultPage />
               </Layout>
             </PrivateRoute>
           } 
