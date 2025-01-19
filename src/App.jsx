@@ -6,6 +6,7 @@ import RevisionsListPage from "./pages/revision/RevisionsListPage";
 import PrivateRoute from "./components/PrivateRoute";
 import Layout from "./components/Layout";
 import VaultPage from "./pages/vault/VaultPage";
+import MurajaahPage from "./pages/murajaah/MurajaahPage";
 
 function App() {
   return (
@@ -56,6 +57,16 @@ function App() {
             <PrivateRoute>
               <Layout>
                 <VaultPage />
+              </Layout>
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/murajaah" 
+          element={
+            <PrivateRoute>
+              <Layout>
+                <MurajaahPage />
               </Layout>
             </PrivateRoute>
           } 

@@ -430,7 +430,7 @@ export default function MemorizationPage() {
               Selesai
             </Button>
           </div>
-        </div>
+    </div>
       </CardContent>
     </Card>
   );
