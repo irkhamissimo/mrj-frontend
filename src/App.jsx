@@ -2,7 +2,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import LoginPage from "./pages/auth/LoginPage";
 import MemorizationPage from "./pages/memorization/MemorizationPage";
 import RevisionPage from "./pages/revision/RevisionPage";
+import RevisionsListPage from "./pages/revision/RevisionsListPage";
 import PrivateRoute from "./components/PrivateRoute";
+import Layout from "./components/Layout";
 
 function App() {
   return (
@@ -21,7 +23,19 @@ function App() {
           path="/memorization" 
           element={
             <PrivateRoute>
-              <MemorizationPage />
+              <Layout>
+                <MemorizationPage />
+              </Layout>
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/revisions" 
+          element={
+            <PrivateRoute>
+              <Layout>
+                <RevisionsListPage />
+              </Layout>
             </PrivateRoute>
           } 
         />
@@ -29,7 +43,9 @@ function App() {
           path="/revision/:entryId" 
           element={
             <PrivateRoute>
-              <RevisionPage />
+              <Layout>
+                <RevisionPage />
+              </Layout>
             </PrivateRoute>
           } 
         />

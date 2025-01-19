@@ -221,187 +221,185 @@ export default function MemorizationPage() {
   }, [completedSessions]);
 
   // Add effect to check for completed memorization
-  useEffect(() => {
-    const checkCompletedMemorization = async () => {
-      try {
-        const response = await fetch("http://localhost:5000/api/memorizations/completed", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-        const data = await response.json();
+  // useEffect(() => {
+  //   const checkCompletedMemorization = async () => {
+  //     try {
+  //       const response = await fetch("http://localhost:5000/api/memorizations/completed", {
+  //         headers: {
+  //           Authorization: `Bearer ${localStorage.getItem("token")}`,
+  //         },
+  //       });
+  //       const data = await response.json();
         
-        // If there's a completed memorization, redirect to revision page
-        if (response.ok && data.length > 0) {
-          navigate(`/revision/${data[0]._id}`);
-          return;
-        }
-      } catch (error) {
-        console.error("Failed to check completed memorization:", error);
-      }
-    };
+  //       // If there's a completed memorization, redirect to revision page
+  //       if (response.ok && data.length > 0) {
+  //         navigate(`/revision/${data[0]._id}`);
+  //         return;
+  //       }
+  //     } catch (error) {
+  //       console.error("Failed to check completed memorization:", error);
+  //     }
+  //   };
 
-    checkCompletedMemorization();
-  }, [navigate]);
+  //   checkCompletedMemorization();
+  // }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-2xl font-bold">Ziyadah</CardTitle>
-            <span className="text-sm text-muted-foreground">{formatDate()}</span>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Timer and Session Indicators */}
-          <div className="flex items-center justify-center gap-8 mb-8">
-            {/* Main Timer Circle */}
-            <div className="relative w-32 h-32">
-              <svg className="w-full h-full transform -rotate-90">
+    <Card className="max-w-2xl mx-auto">
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-2xl font-bold">Ziyadah</CardTitle>
+          <span className="text-sm text-muted-foreground">{formatDate()}</span>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Timer and Session Indicators */}
+        <div className="flex items-center justify-center gap-8 mb-8">
+          {/* Main Timer Circle */}
+          <div className="relative w-32 h-32">
+            <svg className="w-full h-full transform -rotate-90">
+              <circle
+                cx="64"
+                cy="64"
+                r="60"
+                className="stroke-muted fill-none"
+                strokeWidth="8"
+              />
+              {activeSession && (
                 <circle
                   cx="64"
                   cy="64"
                   r="60"
-                  className="stroke-muted fill-none"
+                  className="stroke-primary fill-none"
                   strokeWidth="8"
+                  strokeDasharray={`${(timeElapsed / 25) * 377} 377`}
                 />
-                {activeSession && (
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r="60"
-                    className="stroke-primary fill-none"
-                    strokeWidth="8"
-                    strokeDasharray={`${(timeElapsed / 25) * 377} 377`}
-                  />
-                )}
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center text-2xl font-bold">
-                {activeSession ? formatTime(timeElapsed) : "25:00"}
-              </div>
-            </div>
-
-            {/* Session Indicators */}
-            <div className="flex gap-3">
-              {[...Array(4)].map((_, index) => (
-                <div
-                  key={index}
-                  className={`w-4 h-4 rounded-full border-2 border-primary ${
-                    index < completedSessions
-                      ? "bg-primary"
-                      : "bg-background"
-                  }`}
-                />
-              ))}
+              )}
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center text-2xl font-bold">
+              {activeSession ? formatTime(timeElapsed) : "25:00"}
             </div>
           </div>
 
-          {/* Surah and Verse Selection */}
-          <div className="space-y-6">
-            {/* Starting Point */}
-            <div className="space-y-2">
-              <Label>Start From</Label>
-              <div className="flex gap-4">
-                <Select 
-                  onValueChange={setStartSurah} 
-                  disabled={activeSession !== null}
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Select Surah" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {surahs.map((surah) => (
-                      <SelectItem key={surah.number} value={surah.number.toString()}>
-                        {surah.number}. {surah.englishName} ({surah.name})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          {/* Session Indicators */}
+          <div className="flex gap-3">
+            {[...Array(4)].map((_, index) => (
+              <div
+                key={index}
+                className={`w-4 h-4 rounded-full border-2 border-primary ${
+                  index < completedSessions
+                    ? "bg-primary"
+                    : "bg-background"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
 
-                {startSurah && (
-                  <Select 
-                    onValueChange={setStartVerse}
-                    disabled={activeSession !== null}
-                  >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Select Ayah" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[...Array(surahs.find(s => s.number === parseInt(startSurah))?.numberOfAyahs || 0)].map((_, i) => (
-                        <SelectItem key={i + 1} value={(i + 1).toString()}>
-                          Ayah {i + 1}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-            </div>
-
-            {/* Ending Point */}
-            <div className="space-y-2">
-              <Label>End At</Label>
-              <div className="flex gap-4">
-                <Select 
-                  onValueChange={setEndSurah}
-                  disabled={activeSession !== null}
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Select Surah" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {surahs.map((surah) => (
-                      <SelectItem key={surah.number} value={surah.number.toString()}>
-                        {surah.number}. {surah.englishName} ({surah.name})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {endSurah && (
-                  <Select 
-                    onValueChange={setEndVerse}
-                    disabled={activeSession !== null}
-                  >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Select Ayah" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[...Array(surahs.find(s => s.number === parseInt(endSurah))?.numberOfAyahs || 0)].map((_, i) => (
-                        <SelectItem key={i + 1} value={(i + 1).toString()}>
-                          Ayah {i + 1}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-            </div>
-
+        {/* Surah and Verse Selection */}
+        <div className="space-y-6">
+          {/* Starting Point */}
+          <div className="space-y-2">
+            <Label>Start From</Label>
             <div className="flex gap-4">
-              <Button
-                className="flex-1"
-                onClick={activeSession ? handleTogglePause : handleStartMemorization}
-                disabled={(!startSurah || !startVerse || !endSurah || !endVerse) && !activeSession}
+              <Select 
+                onValueChange={setStartSurah} 
+                disabled={activeSession !== null}
               >
-                {activeSession 
-                  ? (isPaused ? "Lanjutkan" : "Jeda") 
-                  : "Mulai"}
-              </Button>
-              
-              <Button
-                className="flex-1"
-                onClick={handleFinishMemorization}
-                disabled={completedSessions === 0}
-                variant="secondary"
-              >
-                Selesai
-              </Button>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Select Surah" />
+                </SelectTrigger>
+                <SelectContent>
+                  {surahs.map((surah) => (
+                    <SelectItem key={surah.number} value={surah.number.toString()}>
+                      {surah.number}. {surah.englishName} ({surah.name})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {startSurah && (
+                <Select 
+                  onValueChange={setStartVerse}
+                  disabled={activeSession !== null}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Select Ayah" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[...Array(surahs.find(s => s.number === parseInt(startSurah))?.numberOfAyahs || 0)].map((_, i) => (
+                      <SelectItem key={i + 1} value={(i + 1).toString()}>
+                        Ayah {i + 1}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+
+          {/* Ending Point */}
+          <div className="space-y-2">
+            <Label>End At</Label>
+            <div className="flex gap-4">
+              <Select 
+                onValueChange={setEndSurah}
+                disabled={activeSession !== null}
+              >
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Select Surah" />
+                </SelectTrigger>
+                <SelectContent>
+                  {surahs.map((surah) => (
+                    <SelectItem key={surah.number} value={surah.number.toString()}>
+                      {surah.number}. {surah.englishName} ({surah.name})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {endSurah && (
+                <Select 
+                  onValueChange={setEndVerse}
+                  disabled={activeSession !== null}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Select Ayah" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[...Array(surahs.find(s => s.number === parseInt(endSurah))?.numberOfAyahs || 0)].map((_, i) => (
+                      <SelectItem key={i + 1} value={(i + 1).toString()}>
+                        Ayah {i + 1}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </div>
+
+          <div className="flex gap-4">
+            <Button
+              className="flex-1"
+              onClick={activeSession ? handleTogglePause : handleStartMemorization}
+              disabled={(!startSurah || !startVerse || !endSurah || !endVerse) && !activeSession}
+            >
+              {activeSession 
+                ? (isPaused ? "Lanjutkan" : "Jeda") 
+                : "Mulai"}
+            </Button>
+            
+            <Button
+              className="flex-1"
+              onClick={handleFinishMemorization}
+              disabled={completedSessions === 0}
+              variant="secondary"
+            >
+              Selesai
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

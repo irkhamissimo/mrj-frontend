@@ -173,111 +173,109 @@ export default function RevisionPage() {
   if (!memorization) return null;
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-2xl font-bold">
-              Murajaah Hafalan Baru
-            </CardTitle>
-            <span className="text-sm text-muted-foreground">{formatDate()}</span>
-          </div>
-          <p className="text-muted-foreground">
-            {memorization.surahEnglishName}: {memorization.fromVerse} - {memorization.toVerse}
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Timer and Session Indicators Container */}
-          <div className="flex items-center justify-center gap-8">
-            {/* Main Timer Circle */}
-            <div className="flex items-center gap-8">
-              <div className="relative w-32 h-32">
-                <svg className="w-full h-full transform -rotate-90">
+    <Card className="max-w-2xl mx-auto">
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-2xl font-bold">
+            Murajaah Hafalan Baru
+          </CardTitle>
+          <span className="text-sm text-muted-foreground">{formatDate()}</span>
+        </div>
+        <p className="text-muted-foreground">
+          {memorization.surahEnglishName}: {memorization.fromVerse} - {memorization.toVerse}
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Timer and Session Indicators Container */}
+        <div className="flex items-center justify-center gap-8">
+          {/* Main Timer Circle */}
+          <div className="flex items-center gap-8">
+            <div className="relative w-32 h-32">
+              <svg className="w-full h-full transform -rotate-90">
+                <circle
+                  cx="64"
+                  cy="64"
+                  r="58"
+                  className="stroke-muted fill-none"
+                  strokeWidth="12"
+                />
+                {activeSession && (
                   <circle
                     cx="64"
                     cy="64"
                     r="58"
-                    className="stroke-muted fill-none"
+                    className="stroke-primary fill-none"
                     strokeWidth="12"
+                    strokeDasharray={`${(timeElapsed / parseInt(revisionDurations[completedSessions + 1])) * 365} 365`}
                   />
-                  {activeSession && (
-                    <circle
-                      cx="64"
-                      cy="64"
-                      r="58"
-                      className="stroke-primary fill-none"
-                      strokeWidth="12"
-                      strokeDasharray={`${(timeElapsed / parseInt(revisionDurations[completedSessions + 1])) * 365} 365`}
-                    />
-                  )}
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center text-2xl font-bold">
-                  {activeSession ? formatTime(timeElapsed) : "00:00"}
-                </div>
-              </div>
-
-              {/* Session Indicators - Horizontal */}
-              <div className="flex gap-2">
-                {[1, 2, 3, 4, 5].map((sessionNumber) => (
-                  <div
-                    key={sessionNumber}
-                    className={`w-4 h-4 rounded-full border-2 border-primary ${
-                      sessionNumber <= completedSessions
-                        ? "bg-primary"
-                        : "bg-background"
-                    }`}
-                  />
-                ))}
+                )}
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center text-2xl font-bold">
+                {activeSession ? formatTime(timeElapsed) : "00:00"}
               </div>
             </div>
-          </div>
 
-          {/* Revision Sessions List */}
-          <div className="space-y-4">
-            {[1, 2, 3, 4, 5].map((sessionNumber) => (
-              <div key={sessionNumber} className="flex items-center justify-between gap-4 p-2 border rounded-lg">
-                <span className="font-medium">Murajaah #{sessionNumber}</span>
-                <div className="flex items-center gap-2">
-                  <Select
-                    value={revisionDurations[sessionNumber]}
-                    onValueChange={(value) => 
-                      setRevisionDurations(prev => ({...prev, [sessionNumber]: value}))
-                    }
-                    disabled={activeSession !== null || sessionNumber !== completedSessions + 1}
-                  >
-                    <SelectTrigger className="w-[120px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="10">10 detik</SelectItem>
-                      <SelectItem value="15">15 detik</SelectItem>
-                      <SelectItem value="20">20 detik</SelectItem>
-                      <SelectItem value="25">25 detik</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {sessionNumber === completedSessions + 1 && !activeSession && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleStartRevision(sessionNumber)}
-                    >
-                      <PlayCircle className="h-6 w-6" />
-                    </Button>
-                  )}
-                  {activeSession && sessionNumber === completedSessions + 1 && (
-                    <Button
-                      variant="outline"
-                      onClick={handleTogglePause}
-                    >
-                      {isPaused ? "Lanjutkan" : "Jeda"}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
+            {/* Session Indicators - Horizontal */}
+            <div className="flex gap-2">
+              {[1, 2, 3, 4, 5].map((sessionNumber) => (
+                <div
+                  key={sessionNumber}
+                  className={`w-4 h-4 rounded-full border-2 border-primary ${
+                    sessionNumber <= completedSessions
+                      ? "bg-primary"
+                      : "bg-background"
+                  }`}
+                />
+              ))}
+            </div>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+
+        {/* Revision Sessions List */}
+        <div className="space-y-4">
+          {[1, 2, 3, 4, 5].map((sessionNumber) => (
+            <div key={sessionNumber} className="flex items-center justify-between gap-4 p-2 border rounded-lg">
+              <span className="font-medium">Murajaah #{sessionNumber}</span>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={revisionDurations[sessionNumber]}
+                  onValueChange={(value) => 
+                    setRevisionDurations(prev => ({...prev, [sessionNumber]: value}))
+                  }
+                  disabled={activeSession !== null || sessionNumber !== completedSessions + 1}
+                >
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10 detik</SelectItem>
+                    <SelectItem value="15">15 detik</SelectItem>
+                    <SelectItem value="20">20 detik</SelectItem>
+                    <SelectItem value="25">25 detik</SelectItem>
+                  </SelectContent>
+                </Select>
+                {sessionNumber === completedSessions + 1 && !activeSession && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleStartRevision(sessionNumber)}
+                  >
+                    <PlayCircle className="h-6 w-6" />
+                  </Button>
+                )}
+                {activeSession && sessionNumber === completedSessions + 1 && (
+                  <Button
+                    variant="outline"
+                    onClick={handleTogglePause}
+                  >
+                    {isPaused ? "Lanjutkan" : "Jeda"}
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 } 
