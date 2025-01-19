@@ -27,6 +27,7 @@ export default function MemorizationPage() {
   const [completedSessions, setCompletedSessions] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [currentEntry, setCurrentEntry] = useState(null);
+  const [todayMemorization, setTodayMemorization] = useState(null);
 
   // Fetch surahs on component mount
   useEffect(() => {
@@ -44,6 +45,34 @@ export default function MemorizationPage() {
       }
     };
     fetchSurahs();
+  }, []);
+
+  // Add new useEffect to fetch today's memorization data
+  useEffect(() => {
+    const fetchTodayMemorization = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/memorizations/completedMemorizations", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        const data = await response.json();
+        if (response.ok && data.length > 0) {
+          const todayMem = data[0];
+          setTodayMemorization(todayMem);
+          // Set the form values based on today's memorization
+          setStartSurah(todayMem.surahNumber.toString());
+          setStartVerse(todayMem.fromVerse.toString());
+          setEndSurah(todayMem.surahNumber.toString());
+          setEndVerse(todayMem.toVerse.toString());
+          setCompletedSessions(todayMem.totalSessionsCompleted || 0);
+        }
+      } catch (error) {
+        console.error("Failed to fetch today's memorization:", error);
+      }
+    };
+
+    fetchTodayMemorization();
   }, []);
 
   // Modify handleSessionComplete to properly update UI
@@ -287,8 +316,8 @@ export default function MemorizationPage() {
               <div
                 key={index}
                 className={`w-4 h-4 rounded-full border-2 border-primary ${
-                  index < completedSessions
-                    ? "bg-primary"
+                  todayMemorization?.totalSessionsCompleted > index
+                    ? "bg-green-400"
                     : "bg-background"
                 }`}
               />
@@ -304,7 +333,8 @@ export default function MemorizationPage() {
             <div className="flex gap-4">
               <Select 
                 onValueChange={setStartSurah} 
-                disabled={activeSession !== null}
+                value={startSurah}
+                disabled={activeSession !== null || todayMemorization?.status === "completed"}
               >
                 <SelectTrigger className="flex-1">
                   <SelectValue placeholder="Select Surah" />
@@ -312,29 +342,28 @@ export default function MemorizationPage() {
                 <SelectContent>
                   {surahs.map((surah) => (
                     <SelectItem key={surah.number} value={surah.number.toString()}>
-                      {surah.number}. {surah.englishName} ({surah.name})
+                      {surah.englishName}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
-              {startSurah && (
-                <Select 
-                  onValueChange={setStartVerse}
-                  disabled={activeSession !== null}
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Select Ayah" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[...Array(surahs.find(s => s.number === parseInt(startSurah))?.numberOfAyahs || 0)].map((_, i) => (
-                      <SelectItem key={i + 1} value={(i + 1).toString()}>
-                        Ayah {i + 1}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              <Select 
+                onValueChange={setStartVerse}
+                value={startVerse}
+                disabled={activeSession !== null || todayMemorization?.status === "completed"}
+              >
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Select Ayah" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...Array(surahs.find(s => s.number === parseInt(startSurah))?.numberOfAyahs || 0)].map((_, i) => (
+                    <SelectItem key={i + 1} value={(i + 1).toString()}>
+                      Ayah {i + 1}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -344,7 +373,8 @@ export default function MemorizationPage() {
             <div className="flex gap-4">
               <Select 
                 onValueChange={setEndSurah}
-                disabled={activeSession !== null}
+                value={endSurah}
+                disabled={activeSession !== null || todayMemorization?.status === "completed"}
               >
                 <SelectTrigger className="flex-1">
                   <SelectValue placeholder="Select Surah" />
@@ -352,29 +382,28 @@ export default function MemorizationPage() {
                 <SelectContent>
                   {surahs.map((surah) => (
                     <SelectItem key={surah.number} value={surah.number.toString()}>
-                      {surah.number}. {surah.englishName} ({surah.name})
+                      {surah.englishName}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
-              {endSurah && (
-                <Select 
-                  onValueChange={setEndVerse}
-                  disabled={activeSession !== null}
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Select Ayah" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[...Array(surahs.find(s => s.number === parseInt(endSurah))?.numberOfAyahs || 0)].map((_, i) => (
-                      <SelectItem key={i + 1} value={(i + 1).toString()}>
-                        Ayah {i + 1}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              <Select 
+                onValueChange={setEndVerse}
+                value={endVerse}
+                disabled={activeSession !== null || todayMemorization?.status === "completed"}
+              >
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Select Ayah" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...Array(surahs.find(s => s.number === parseInt(endSurah))?.numberOfAyahs || 0)].map((_, i) => (
+                    <SelectItem key={i + 1} value={(i + 1).toString()}>
+                      Ayah {i + 1}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -382,7 +411,10 @@ export default function MemorizationPage() {
             <Button
               className="flex-1"
               onClick={activeSession ? handleTogglePause : handleStartMemorization}
-              disabled={(!startSurah || !startVerse || !endSurah || !endVerse) && !activeSession}
+              disabled={
+                (!startSurah || !startVerse || !endSurah || !endVerse) && !activeSession ||
+                todayMemorization?.status === "completed"
+              }
             >
               {activeSession 
                 ? (isPaused ? "Lanjutkan" : "Jeda") 
@@ -392,7 +424,7 @@ export default function MemorizationPage() {
             <Button
               className="flex-1"
               onClick={handleFinishMemorization}
-              disabled={completedSessions === 0}
+              disabled={completedSessions === 0 || todayMemorization?.status === "completed"}
               variant="secondary"
             >
               Selesai
