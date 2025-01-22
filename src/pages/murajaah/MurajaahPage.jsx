@@ -340,7 +340,12 @@ export default function MurajaahPage() {
               <div key={surah.surahNumber} className="p-4 border rounded-lg">
                 <div className="flex items-center justify-between">
                   <h3 className="font-medium">
-                    {surah.surahName} ({surah.surahNumber})
+                    {surah.surahName} ({surah.surahNumber}) - {surah.verses.map((verse, idx) => (
+                      <span key={idx}>
+                        {verse.fromVerse}-{verse.toVerse}
+                        {idx < surah.verses.length - 1 ? ", " : ""}
+                      </span>
+                    ))}
                   </h3>
                   {activeSession?.verifiedMemorizations?.some(
                     mem => mem.surahNumber === surah.surahNumber
@@ -364,35 +369,6 @@ export default function MurajaahPage() {
                       <Play className="h-4 w-4" />
                     </Button>
                   )}
-                </div>
-                <div className="mt-2 space-y-2">
-                  {surah.verses.map((verse, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <p className="text-sm text-gray-600 flex-grow">
-                        Ayat {verse.fromVerse} - {verse.toVerse}
-                      </p>
-                      <div className="flex gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-6 w-6"
-                          onClick={() => handleUpdateVerses(surah.surahNumber, idx, 'up')}
-                          disabled={loading || activeSession}
-                        >
-                          <ChevronUp className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-6 w-6"
-                          onClick={() => handleUpdateVerses(surah.surahNumber, idx, 'down')}
-                          disabled={loading || verse.toVerse <= verse.fromVerse || activeSession}
-                        >
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
                 </div>
               </div>
             ))}
@@ -430,15 +406,17 @@ export default function MurajaahPage() {
                     </Button>
                   )}
                 </div>
-                <div className="mt-2">
+                <div className="mt-2 space-y-2">
                   {Object.values(juz.surahs).map((surah) => (
                     <div key={surah.surahNumber} className="ml-4">
-                      <p className="text-sm font-medium">{surah.surahName}</p>
-                      {surah.verses.map((verse, idx) => (
-                        <p key={idx} className="text-sm text-gray-600">
-                          Ayat {verse.fromVerse} - {verse.toVerse}
-                        </p>
-                      ))}
+                      <p className="text-sm">
+                        {surah.surahName} - Ayat {surah.verses.map((verse, idx) => (
+                          <span key={idx}>
+                            {verse.fromVerse}-{verse.toVerse}
+                            {idx < surah.verses.length - 1 ? ", " : ""}
+                          </span>
+                        ))}
+                      </p>
                     </div>
                   ))}
                 </div>
