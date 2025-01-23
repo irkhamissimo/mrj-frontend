@@ -7,6 +7,7 @@ import PrivateRoute from "./components/PrivateRoute";
 import Layout from "./components/Layout";
 import VaultPage from "./pages/vault/VaultPage";
 import MurajaahPage from "./pages/murajaah/MurajaahPage";
+import MurajaahPlayer from "./pages/murajaah/MurajaahPlayer";
 
 function App() {
   return (
@@ -67,6 +68,16 @@ function App() {
             <PrivateRoute>
               <Layout>
                 <MurajaahPage />
+              </Layout>
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/murajaah/:type/:identifier" 
+          element={
+            <PrivateRoute>
+              <Layout>
+                <MurajaahPlayer />
               </Layout>
             </PrivateRoute>
           } 

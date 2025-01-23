@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, ChevronUp, ChevronDown, Play, Circle, Pause } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 function SessionIndicators({ completedSessions = 0, elapsedTime = 0, duration = 25 }) {
   // Convert duration to seconds for calculation (25 seconds for testing)
@@ -60,6 +61,7 @@ function SessionIndicators({ completedSessions = 0, elapsedTime = 0, duration = 
 }
 
 export default function MurajaahPage() {
+  const navigate = useNavigate();
   const [memorizedData, setMemorizedData] = useState({ bySurah: [], byJuz: [] });
   const [loading, setLoading] = useState(false);
   const [completedSessions, setCompletedSessions] = useState(0);
@@ -176,53 +178,8 @@ export default function MurajaahPage() {
     };
   }, [activeSession]);
 
-  const handleStartRevision = async (type, identifier) => {
-    try {
-      const response = await fetch("http://localhost:5000/api/revisions/start", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({
-          type,
-          identifier,
-          duration: 25
-        }),
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setActiveSession(data.session);
-        setElapsedTime(0);
-        setIsPaused(false);
-      } else {
-        console.error("Failed to start revision:", response);
-      }
-    } catch (error) {
-      console.error("Failed to start revision:", error);
-    }
-  };
-
-  const handleTogglePause = async () => {
-    if (!activeSession) return;
-
-    try {
-      const response = await fetch(`http://localhost:5000/api/revisions/${activeSession._id}/pause`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setIsPaused(data.session.isPaused);
-        setActiveSession(data.session);
-      }
-    } catch (error) {
-      console.error("Failed to toggle pause:", error);
-    }
+  const handleStartMurajaah = (type, identifier) => {
+    navigate(`/murajaah/${type}/${identifier}`);
   };
 
   const handleAddMemorizedSurah = async (surahNumber, fromVerse, toVerse) => {
@@ -340,39 +297,25 @@ export default function MurajaahPage() {
               <div key={surah.surahNumber} className="p-4 border rounded-lg">
                 <div className="flex items-center justify-between">
                   <h3 className="font-medium">
-                    {surah.surahName} ({surah.surahNumber}) - {surah.verses.map((verse, idx) => (
+                    {surah.surahName} ({surah.surahNumber}) - Ayat {surah.verses.map((verse, idx) => (
                       <span key={idx}>
                         {verse.fromVerse}-{verse.toVerse}
                         {idx < surah.verses.length - 1 ? ", " : ""}
                       </span>
                     ))}
                   </h3>
-                  {activeSession?.verifiedMemorizations?.some(
-                    mem => mem.surahNumber === surah.surahNumber
-                  ) ? (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={handleTogglePause}
-                    >
-                      {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleStartRevision('surah', surah.surahNumber)}
-                      disabled={activeSession !== null}
-                    >
-                      <Play className="h-4 w-4" />
-                    </Button>
-                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handleStartMurajaah('surah', surah.surahNumber)}
+                  >
+                    <Play className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             ))}
-            <Button className="w-full" variant="outline" disabled={activeSession}>
+            <Button className="w-full" variant="outline">
               <Plus className="w-4 h-4 mr-2" />
               Tambah Surat yang Dihafal
             </Button>
@@ -383,28 +326,14 @@ export default function MurajaahPage() {
               <div key={juz.juzNumber} className="p-4 border rounded-lg">
                 <div className="flex items-center justify-between">
                   <h3 className="font-medium">Juz {juz.juzNumber}</h3>
-                  {activeSession?.verifiedMemorizations?.some(
-                    mem => mem.juzNumber === juz.juzNumber
-                  ) ? (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={handleTogglePause}
-                    >
-                      {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleStartRevision('juz', juz.juzNumber)}
-                      disabled={activeSession !== null}
-                    >
-                      <Play className="h-4 w-4" />
-                    </Button>
-                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handleStartMurajaah('juz', juz.juzNumber)}
+                  >
+                    <Play className="h-4 w-4" />
+                  </Button>
                 </div>
                 <div className="mt-2 space-y-2">
                   {Object.values(juz.surahs).map((surah) => (
@@ -422,7 +351,7 @@ export default function MurajaahPage() {
                 </div>
               </div>
             ))}
-            <Button className="w-full" variant="outline" disabled={activeSession}>
+            <Button className="w-full" variant="outline">
               <Plus className="w-4 h-4 mr-2" />
               Tambah Juz yang Sudah Dihafal
             </Button>
