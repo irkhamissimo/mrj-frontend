@@ -33,3 +33,6 @@ coverage/
 # Miscellaneous
 *.tgz
 *.zip
+
+# package-lock.json
+package-lock.json

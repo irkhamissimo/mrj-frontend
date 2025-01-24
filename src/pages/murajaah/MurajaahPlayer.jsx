@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 export default function MurajaahPlayer() {
   const navigate = useNavigate();
   const { type: initialType, identifier } = useParams();
-  const [type, setType] = useState(initialType);
+  const [type, setType] = useState(initialType || 'juz');
   const [memorizedData, setMemorizedData] = useState({ bySurah: [], byJuz: [] });
   const [startSurah, setStartSurah] = useState("");
   const [endSurah, setEndSurah] = useState("");
@@ -23,6 +23,19 @@ export default function MurajaahPlayer() {
   const [completedSessions, setCompletedSessions] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [verifiedMemorizations, setVerifiedMemorizations] = useState([]);
+
+  // Sync UI with URL type parameter
+  useEffect(() => {
+    if (initialType) {
+      setType(initialType);
+    }
+  }, [initialType]);
+
+  // Handle toggle change
+  const handleTypeChange = (checked) => {
+    const newType = checked ? 'surah' : 'juz';
+    setType(newType);
+  };
 
   // Fetch memorized data on component mount
   useEffect(() => {
@@ -66,6 +79,8 @@ export default function MurajaahPlayer() {
   // Start revision session
   const handleStartRevision = async () => {
     try {
+      // make duration 25 seconds
+      const duration = 25;
       const response = await fetch("http://localhost:5000/api/revisions/start", {
         method: "POST",
         headers: {
@@ -75,7 +90,7 @@ export default function MurajaahPlayer() {
         body: JSON.stringify({
           type,
           identifier: parseInt(type === 'juz' ? juzNumber : startSurah),
-          duration: 25
+          duration: duration
         }),
       });
 
@@ -121,7 +136,7 @@ export default function MurajaahPlayer() {
         setTimeElapsed((prev) => {
           if (prev >= 25) {
             clearInterval(interval);
-            navigate('/murajaah');
+            // navigate('/murajaah');
             return 25;
           }
           return prev + 1;
@@ -191,11 +206,11 @@ export default function MurajaahPlayer() {
           <CardTitle className="text-2xl font-bold">Murajaah</CardTitle>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <Label htmlFor="mode">Juz</Label>
+              <Label htmlFor="mode">{type === 'surah' ? 'Surah' : 'Juz'}</Label>
               <Switch 
                 id="mode" 
-                checked={type === 'juz'}
-                onCheckedChange={(checked) => setType(checked ? 'juz' : 'surah')}
+                checked={type === 'surah'}
+                onCheckedChange={handleTypeChange}
               />
             </div>
             {/* Session indicators */}
