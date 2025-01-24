@@ -76,6 +76,57 @@ export default function MurajaahPlayer() {
     }
   }, [startSurah]);
 
+  // Fetch completed sessions count
+  useEffect(() => {
+    const fetchCompletedSessions = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/revisions/sessions", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        const data = await response.json();
+        setCompletedSessions(data.totalSessionsCompleted || 0);
+      } catch (error) {
+        console.error("Failed to fetch completed sessions:", error);
+      }
+    };
+
+    fetchCompletedSessions();
+  }, []);
+
+  // Check session status
+  const checkSessionStatus = async () => {
+    if (!activeSession) return;
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/revisions/${activeSession._id}/status`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      const data = await response.json();
+      if (response.ok && data.session.completed) {
+        // Fetch latest completed sessions after completion
+        const sessionsResponse = await fetch("http://localhost:5000/api/revisions/sessions", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        const sessionsData = await sessionsResponse.json();
+        setCompletedSessions(sessionsData.totalSessionsCompleted || 0);
+        
+        setActiveSession(null);
+        setIsPaused(false);
+        setTimeElapsed(25); // Set to max duration when completed
+        navigate('/murajaah');
+      }
+    } catch (error) {
+      console.error("Failed to check session status:", error);
+    }
+  };
+
   // Start revision session
   const handleStartRevision = async () => {
     try {
@@ -128,24 +179,43 @@ export default function MurajaahPlayer() {
     }
   };
 
-  // Timer effect
+  // Timer effect with session status check
   useEffect(() => {
     let interval;
+    let statusInterval;
+
     if (activeSession && !isPaused) {
+      // Calculate initial elapsed time from session start
+      const now = new Date();
+      const startTime = new Date(activeSession.startTime);
+      const pauseDuration = activeSession.totalPauseDuration || 0;
+      const initialElapsed = Math.floor((now - startTime) / 1000) - (pauseDuration * 60);
+      setTimeElapsed(Math.min(25, Math.max(0, initialElapsed)));
+
       interval = setInterval(() => {
         setTimeElapsed((prev) => {
           if (prev >= 25) {
             clearInterval(interval);
-            // navigate('/murajaah');
             return 25;
           }
           return prev + 1;
         });
       }, 1000);
 
-      return () => clearInterval(interval);
+      // Add status check interval
+      statusInterval = setInterval(() => {
+        checkSessionStatus();
+      }, 1000);
+
+      return () => {
+        clearInterval(interval);
+        clearInterval(statusInterval);
+      };
     }
-    return () => {};
+    return () => {
+      if (interval) clearInterval(interval);
+      if (statusInterval) clearInterval(statusInterval);
+    };
   }, [activeSession, isPaused]);
 
   const formatTime = (seconds) => {
@@ -230,8 +300,32 @@ export default function MurajaahPlayer() {
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Timer Display */}
-        <div className="flex justify-center text-4xl font-bold">
-          {formatTime(timeElapsed)}
+        <div className="relative w-32 h-32 mx-auto">
+          <svg className="w-full h-full transform -rotate-90">
+            <circle
+              cx="64"
+              cy="64"
+              r="60"
+              className="stroke-muted fill-none"
+              strokeWidth="8"
+            />
+            {activeSession && (
+              <circle
+                cx="64"
+                cy="64"
+                r="60"
+                className={cn(
+                  "fill-none transition-all duration-500",
+                  timeElapsed >= 25 ? "stroke-green-500" : "stroke-primary"
+                )}
+                strokeWidth="8"
+                strokeDasharray={`${(timeElapsed / 25) * 377} 377`}
+              />
+            )}
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center text-2xl font-bold">
+            {formatTime(timeElapsed)}
+          </div>
         </div>
 
         {type === 'surah' ? (

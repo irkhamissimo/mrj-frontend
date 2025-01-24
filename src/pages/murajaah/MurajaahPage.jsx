@@ -83,7 +83,7 @@ export default function MurajaahPage() {
         setMemorizedData(memData);
 
         // Fetch completed sessions
-        const sessionsResponse = await fetch("http://localhost:5000/api/revisions/memorized", {
+        const sessionsResponse = await fetch("http://localhost:5000/api/revisions/sessions", {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
@@ -144,7 +144,7 @@ export default function MurajaahPage() {
           localStorage.removeItem('activeSession');
           
           // Fetch updated completed sessions count
-          const sessionsResponse = await fetch("http://localhost:5000/api/revisions/memorized", {
+          const sessionsResponse = await fetch("http://localhost:5000/api/revisions/sessions", {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
