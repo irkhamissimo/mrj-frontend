@@ -43,7 +43,7 @@ export default function MurajaahPlayer() {
       try {
         const response = await fetch("http://localhost:5000/api/memorized", {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         });
         const data = await response.json();
@@ -82,7 +82,7 @@ export default function MurajaahPlayer() {
       try {
         const response = await fetch("http://localhost:5000/api/revisions/sessions", {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         });
         const data = await response.json();
@@ -102,7 +102,7 @@ export default function MurajaahPlayer() {
     try {
       const response = await fetch(`http://localhost:5000/api/revisions/${activeSession._id}/status`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
       });
 
@@ -111,7 +111,7 @@ export default function MurajaahPlayer() {
         // Fetch latest completed sessions after completion
         const sessionsResponse = await fetch("http://localhost:5000/api/revisions/sessions", {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         });
         const sessionsData = await sessionsResponse.json();
@@ -136,7 +136,7 @@ export default function MurajaahPlayer() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
         body: JSON.stringify({
           type,
@@ -165,7 +165,7 @@ export default function MurajaahPlayer() {
       const response = await fetch(`http://localhost:5000/api/revisions/${activeSession._id}/pause`, {
         method: "PUT",
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
       });
 

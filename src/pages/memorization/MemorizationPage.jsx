@@ -35,7 +35,7 @@ export default function MemorizationPage() {
       try {
         const response = await fetch("http://localhost:5000/api/surahs", {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         });
         const data = await response.json();
@@ -53,7 +53,7 @@ export default function MemorizationPage() {
       try {
         const response = await fetch("http://localhost:5000/api/memorizations/completedMemorizations", {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         });
         const data = await response.json();
@@ -81,7 +81,7 @@ export default function MemorizationPage() {
       const response = await fetch(`http://localhost:5000/api/memorizations/sessions/${activeSession._id}/status`, {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
       });
 
@@ -149,7 +149,7 @@ export default function MemorizationPage() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
           body: JSON.stringify({
             surahNumber: startSurahNum,
@@ -169,7 +169,7 @@ export default function MemorizationPage() {
         response = await fetch(`http://localhost:5000/api/memorizations/${currentEntry._id}/sessions`, {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         });
 
@@ -197,7 +197,7 @@ export default function MemorizationPage() {
       const response = await fetch(`http://localhost:5000/api/memorizations/sessions/${activeSession._id}/pause`, {
         method: "PUT",
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
       });
 
@@ -218,7 +218,7 @@ export default function MemorizationPage() {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
         body: JSON.stringify({
           confidenceLevel: 5,
@@ -255,7 +255,7 @@ export default function MemorizationPage() {
   //     try {
   //       const response = await fetch("http://localhost:5000/api/memorizations/completed", {
   //         headers: {
-  //           Authorization: `Bearer ${localStorage.getItem("token")}`,
+  //           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
   //         },
   //       });
   //       const data = await response.json();

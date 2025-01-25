@@ -12,7 +12,7 @@ export default function VaultPage() {
       try {
         const response = await fetch("http://localhost:5000/api/vault", {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         });
         const data = await response.json();
@@ -31,7 +31,7 @@ export default function VaultPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
         body: JSON.stringify({
           rating: 5,

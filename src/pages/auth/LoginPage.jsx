@@ -33,7 +33,8 @@ export default function LoginPage() {
 
       const data = await response.json();
       if (response.ok) {
-        localStorage.setItem("token", data.token);
+        localStorage.setItem("accessToken", data.accessToken);
+        localStorage.setItem("refreshToken", data.refreshToken);
         navigate("/memorization");
       } else {
         setError(data.message || "Login failed. Please check your credentials.");

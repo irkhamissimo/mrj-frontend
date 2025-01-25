@@ -76,7 +76,7 @@ export default function MurajaahPage() {
         // Fetch memorized data
         const memResponse = await fetch("http://localhost:5000/api/memorized", {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         });
         const memData = await memResponse.json();
@@ -85,7 +85,7 @@ export default function MurajaahPage() {
         // Fetch completed sessions
         const sessionsResponse = await fetch("http://localhost:5000/api/revisions/sessions", {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         });
         const sessionsData = await sessionsResponse.json();
@@ -132,7 +132,7 @@ export default function MurajaahPage() {
           `http://localhost:5000/api/revisions/${activeSession._id}/status`,
           {
             headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
           }
         );
@@ -146,7 +146,7 @@ export default function MurajaahPage() {
           // Fetch updated completed sessions count
           const sessionsResponse = await fetch("http://localhost:5000/api/revisions/sessions", {
             headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
           });
           const sessionsData = await sessionsResponse.json();
@@ -188,7 +188,7 @@ export default function MurajaahPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
         body: JSON.stringify({ surahNumber, fromVerse, toVerse }),
       });
@@ -211,7 +211,7 @@ export default function MurajaahPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
         body: JSON.stringify({ juzNumber }),
       });
@@ -245,7 +245,7 @@ export default function MurajaahPage() {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
           body: JSON.stringify({
             verses: {
@@ -259,7 +259,7 @@ export default function MurajaahPage() {
           // Refresh the data
           const response = await fetch("http://localhost:5000/api/memorized", {
             headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
           });
           const data = await response.json();

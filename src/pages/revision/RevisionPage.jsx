@@ -36,7 +36,7 @@ export default function RevisionPage() {
       try {
         const response = await fetch(`http://localhost:5000/api/memorizations/${entryId}/completed`, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         });
         const data = await response.json();
@@ -56,7 +56,7 @@ export default function RevisionPage() {
       try {
         const response = await fetch(`http://localhost:5000/api/memorizations/${entryId}/revisions`, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         });
         const data = await response.json();
@@ -85,7 +85,7 @@ export default function RevisionPage() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
         body: JSON.stringify({
           rating: 5 // Default rating
@@ -128,7 +128,7 @@ export default function RevisionPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
         body: JSON.stringify({
           duration: parseInt(revisionDurations[sessionNumber])
@@ -152,7 +152,7 @@ export default function RevisionPage() {
       const response = await fetch(`http://localhost:5000/api/memorizations/revisions/${activeSession._id}/pause`, {
         method: "PUT",
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
       });
 

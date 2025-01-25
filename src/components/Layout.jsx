@@ -10,7 +10,7 @@ export default function Layout({ children }) {
       try {
         const response = await fetch("http://localhost:5000/api/menu", {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         });
         const data = await response.json();
