@@ -47,15 +47,25 @@ export async function apiCall(endpoint, options = {}) {
 
     // If unauthorized and we have a refresh token, try to refresh
     if (response.status === 401 && localStorage.getItem("refreshToken")) {
-      const newAccessToken = await refreshAccessToken();
-      
-      // Retry the original request with new token
-      options.headers = {
-        ...options.headers,
-        Authorization: `Bearer ${newAccessToken}`,
-      };
-      
-      return fetch(`${API_URL}${endpoint}`, options);
+      try {
+        const newAccessToken = await refreshAccessToken();
+        
+        // Retry the original request with new token
+        const retryOptions = {
+          ...options,
+          headers: {
+            ...options.headers,
+            Authorization: `Bearer ${newAccessToken}`,
+          },
+        };
+        
+        const retryResponse = await fetch(`${API_URL}${endpoint}`, retryOptions);
+        return retryResponse;
+      } catch (refreshError) {
+        // If refresh fails, redirect to login
+        window.location.href = "/login";
+        throw new Error("Failed to refresh token");
+      }
     }
 
     return response;

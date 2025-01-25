@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { apiCall } from "@/lib/api";
 
 export default function Layout({ children }) {
   const location = useLocation();
@@ -8,11 +9,7 @@ export default function Layout({ children }) {
   useEffect(() => {
     const fetchMenuItems = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/menu", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        });
+        const response = await apiCall("/menu");
         const data = await response.json();
         setMenuItems(data);
       } catch (error) {

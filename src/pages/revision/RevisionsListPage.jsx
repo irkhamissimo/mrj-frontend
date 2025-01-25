@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { apiCall } from "@/lib/api";
 
 export default function RevisionsListPage() {
   const navigate = useNavigate();
@@ -10,11 +11,7 @@ export default function RevisionsListPage() {
   useEffect(() => {
     const fetchCompletedMemorizations = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/memorizations/completed", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        });
+        const response = await apiCall("/memorizations/completed");
         const data = await response.json();
         setCompletedMemorizations(data);
 
@@ -32,11 +29,7 @@ export default function RevisionsListPage() {
 
   const fetchRevisionSessions = async (entryId) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/memorizations/${entryId}/revisions`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
-      });
+      const response = await apiCall(`/memorizations/${entryId}/revisions`);
       const data = await response.json();
       setRevisionSessionsMap(prev => ({
         ...prev,

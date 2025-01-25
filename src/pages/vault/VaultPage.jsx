@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { apiCall } from "@/lib/api";
 
 export default function VaultPage() {
   const [vaultEntries, setVaultEntries] = useState([]);
@@ -10,11 +11,7 @@ export default function VaultPage() {
   useEffect(() => {
     const fetchVaultEntries = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/vault", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        });
+        const response = await apiCall("/vault");
         const data = await response.json();
         setVaultEntries(data);
       } catch (error) {
@@ -27,12 +24,8 @@ export default function VaultPage() {
 
   const handleVerify = async (vaultId) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/vault/${vaultId}/verify`, {
+      const response = await apiCall(`/vault/${vaultId}/verify`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
         body: JSON.stringify({
           rating: 5,
           notes: "Verified memorization"

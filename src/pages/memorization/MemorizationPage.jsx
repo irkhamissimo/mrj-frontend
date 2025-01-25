@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
+import { apiCall } from "@/lib/api";
 
 const formatDate = () => {
   const options = { 
@@ -51,11 +52,7 @@ export default function MemorizationPage() {
   useEffect(() => {
     const fetchTodayMemorization = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/memorizations/completedMemorizations", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        });
+        const response = await apiCall("/memorizations/completedMemorizations");
         const data = await response.json();
         if (response.ok && data.length > 0) {
           const todayMem = data[0];
@@ -78,12 +75,7 @@ export default function MemorizationPage() {
   // Modify handleSessionComplete to properly update UI
   const handleSessionComplete = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/memorizations/sessions/${activeSession._id}/status`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
-      });
+      const response = await apiCall(`/memorizations/sessions/${activeSession._id}/status`);
 
       const data = await response.json();
       if (response.ok && data.session.completed) {
@@ -145,12 +137,8 @@ export default function MemorizationPage() {
       
       if (!currentEntry) {
         // First time - start new memorization
-        response = await fetch("http://localhost:5000/api/memorizations/start", {
+        response = await apiCall("/memorizations/start", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
           body: JSON.stringify({
             surahNumber: startSurahNum,
             fromVerse: startVerseNum,
@@ -166,11 +154,8 @@ export default function MemorizationPage() {
         }
       } else {
         // Subsequent times - start new session for existing entry
-        response = await fetch(`http://localhost:5000/api/memorizations/${currentEntry._id}/sessions`, {
+        response = await apiCall(`/memorizations/${currentEntry._id}/sessions`, {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
         });
 
         const data = await response.json();
@@ -194,11 +179,8 @@ export default function MemorizationPage() {
     if (!activeSession) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/memorizations/sessions/${activeSession._id}/pause`, {
+      const response = await apiCall(`/memorizations/sessions/${activeSession._id}/pause`, {
         method: "PUT",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
       });
 
       const data = await response.json();
@@ -214,12 +196,8 @@ export default function MemorizationPage() {
     if (!currentEntry || completedSessions === 0) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/memorizations/${currentEntry._id}/finish`, {
+      const response = await apiCall(`/memorizations/${currentEntry._id}/finish`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
         body: JSON.stringify({
           confidenceLevel: 5,
           notes: "Completed memorization"

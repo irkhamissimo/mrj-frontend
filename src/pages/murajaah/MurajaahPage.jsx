@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, ChevronUp, ChevronDown, Play, Circle, Pause } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { apiCall } from "@/lib/api";
 
 function SessionIndicators({ completedSessions = 0, elapsedTime = 0, duration = 25 }) {
   // Convert duration to seconds for calculation (25 seconds for testing)
@@ -74,20 +75,12 @@ export default function MurajaahPage() {
     const fetchData = async () => {
       try {
         // Fetch memorized data
-        const memResponse = await fetch("http://localhost:5000/api/memorized", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        });
+        const memResponse = await apiCall("/memorized");
         const memData = await memResponse.json();
         setMemorizedData(memData);
 
         // Fetch completed sessions
-        const sessionsResponse = await fetch("http://localhost:5000/api/revisions/sessions", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        });
+        const sessionsResponse = await apiCall("/revisions/sessions");
         const sessionsData = await sessionsResponse.json();
         setCompletedSessions(sessionsData.totalSessionsCompleted || 0);
       } catch (error) {
@@ -128,14 +121,7 @@ export default function MurajaahPage() {
       if (!activeSession) return;
 
       try {
-        const response = await fetch(
-          `http://localhost:5000/api/revisions/${activeSession._id}/status`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
-          }
-        );
+        const response = await apiCall(`/revisions/${activeSession._id}/status`);
         const data = await response.json();
 
         if (data.session.completed) {
@@ -144,11 +130,7 @@ export default function MurajaahPage() {
           localStorage.removeItem('activeSession');
           
           // Fetch updated completed sessions count
-          const sessionsResponse = await fetch("http://localhost:5000/api/revisions/sessions", {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
-          });
+          const sessionsResponse = await apiCall("/revisions/sessions");
           const sessionsData = await sessionsResponse.json();
           setCompletedSessions(sessionsData.totalSessionsCompleted || 0);
         } else {
@@ -184,12 +166,8 @@ export default function MurajaahPage() {
 
   const handleAddMemorizedSurah = async (surahNumber, fromVerse, toVerse) => {
     try {
-      const response = await fetch("http://localhost:5000/api/memorized/surah", {
+      const response = await apiCall("/memorized/surah", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
         body: JSON.stringify({ surahNumber, fromVerse, toVerse }),
       });
       if (response.ok) {
@@ -207,12 +185,8 @@ export default function MurajaahPage() {
 
   const handleAddMemorizedJuz = async (juzNumber) => {
     try {
-      const response = await fetch("http://localhost:5000/api/memorized/juz", {
+      const response = await apiCall("/memorized/juz", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
         body: JSON.stringify({ juzNumber }),
       });
       if (response.ok) {
@@ -241,12 +215,8 @@ export default function MurajaahPage() {
 
       // Only update if the new verse range is valid
       if (newToVerse >= verse.fromVerse) {
-        const response = await fetch(`http://localhost:5000/api/memorized/update-verses/${surahNumber}`, {
+        const response = await apiCall(`/memorized/update-verses/${surahNumber}`, {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
           body: JSON.stringify({
             verses: {
               fromVerse: verse.fromVerse,
@@ -257,11 +227,7 @@ export default function MurajaahPage() {
 
         if (response.ok) {
           // Refresh the data
-          const response = await fetch("http://localhost:5000/api/memorized", {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
-          });
+          const response = await apiCall("/memorized");
           const data = await response.json();
           setMemorizedData(data);
         }

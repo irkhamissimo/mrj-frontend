@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { apiCall } from "@/lib/api";
 
 export default function MurajaahPlayer() {
   const navigate = useNavigate();
@@ -41,11 +42,7 @@ export default function MurajaahPlayer() {
   useEffect(() => {
     const fetchMemorizedData = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/memorized", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        });
+        const response = await apiCall("/memorized");
         const data = await response.json();
         setMemorizedData(data);
 
@@ -80,11 +77,7 @@ export default function MurajaahPlayer() {
   useEffect(() => {
     const fetchCompletedSessions = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/revisions/sessions", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        });
+        const response = await apiCall("/revisions/sessions");
         const data = await response.json();
         setCompletedSessions(data.totalSessionsCompleted || 0);
       } catch (error) {
@@ -100,20 +93,12 @@ export default function MurajaahPlayer() {
     if (!activeSession) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/revisions/${activeSession._id}/status`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
-      });
+      const response = await apiCall(`/revisions/${activeSession._id}/status`);
 
       const data = await response.json();
       if (response.ok && data.session.completed) {
         // Fetch latest completed sessions after completion
-        const sessionsResponse = await fetch("http://localhost:5000/api/revisions/sessions", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        });
+        const sessionsResponse = await apiCall("/revisions/sessions");
         const sessionsData = await sessionsResponse.json();
         setCompletedSessions(sessionsData.totalSessionsCompleted || 0);
         
@@ -132,11 +117,10 @@ export default function MurajaahPlayer() {
     try {
       // make duration 25 seconds
       const duration = 25;
-      const response = await fetch("http://localhost:5000/api/revisions/start", {
+      const response = await apiCall("/revisions/start", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
         body: JSON.stringify({
           type,
@@ -144,6 +128,7 @@ export default function MurajaahPlayer() {
           duration: duration
         }),
       });
+      console.log(response);
 
       if (response.ok) {
         const data = await response.json();
@@ -162,11 +147,8 @@ export default function MurajaahPlayer() {
     if (!activeSession) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/revisions/${activeSession._id}/pause`, {
+      const response = await apiCall(`/revisions/${activeSession._id}/pause`, {
         method: "PUT",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
       });
 
       if (response.ok) {
