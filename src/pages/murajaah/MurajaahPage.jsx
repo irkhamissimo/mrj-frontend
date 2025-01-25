@@ -240,7 +240,7 @@ export default function MurajaahPage() {
   };
 
   return (
-    <Card className="max-w-4xl mx-auto">
+    <Card className="max-w-2xl mx-auto">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-2xl font-bold">Murajaah</CardTitle>
         <div className="flex items-center gap-4">
