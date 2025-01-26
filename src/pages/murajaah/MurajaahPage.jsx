@@ -114,7 +114,6 @@ export default function MurajaahPage() {
       try {
         // Fetch memorized data
         const memResponse = await apiCall("/memorized");
-        console.log(memResponse);
         const memData = await memResponse.json();
         setMemorizedData(memData);
 
@@ -358,7 +357,7 @@ export default function MurajaahPage() {
               <Card key={surah.surahNumber}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
-                    {surah.surahName} ({surah.surahEnglishName})
+                    {surah.surahEnglishName}: {surah.verses}
                   </CardTitle>
                   <Button
                     variant="ghost"
@@ -372,11 +371,6 @@ export default function MurajaahPage() {
                     )}
                   </Button>
                 </CardHeader>
-                <CardContent>
-                  <div className="text-sm">
-                    Ayat: {surah.verses}
-                  </div>
-                </CardContent>
               </Card>
             ))}
 
@@ -470,7 +464,7 @@ export default function MurajaahPage() {
                   <div className="text-sm space-y-1">
                     {Object.values(juz.surahs).map((surah) => (
                       <div key={surah.surahNumber}>
-                        {surah.surahName}: {surah.verses}
+                        {surah.surahEnglishName}: {surah.verses}
                       </div>
                     ))}
                   </div>
