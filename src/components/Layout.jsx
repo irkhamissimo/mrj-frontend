@@ -9,7 +9,12 @@ export default function Layout({ children }) {
   useEffect(() => {
     const fetchMenuItems = async () => {
       try {
-        const response = await apiCall("/menu");
+        const response = await apiCall("/menu", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
         const data = await response.json();
         setMenuItems(data);
       } catch (error) {
