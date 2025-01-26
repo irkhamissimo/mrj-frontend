@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { popoverClasses } from "@mui/material";
 
 function SessionIndicators({ completedSessions = 0, elapsedTime = 0, duration = 25 }) {
   // Convert duration to seconds for calculation (25 seconds for testing)
@@ -97,8 +98,14 @@ export default function MurajaahPage() {
   useEffect(() => {
     const fetchSurahs = async () => {
       try {
-        const response = await apiCall("/surahs");
+        const response = await apiCall("/surahs", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
         const data = await response.json();
+        console.log(data);
         setSurahs(data);
       } catch (error) {
         console.error("Failed to fetch surahs:", error);
@@ -396,7 +403,7 @@ export default function MurajaahPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {surahs.map((surah) => (
-                        <SelectItem key={surah.number} value={surah.number.toString()}>
+                        <SelectItem key={surah.number} value={surah.number}>
                             {surah.name} ({surah.englishName})
                           </SelectItem>
                         ))}
@@ -494,7 +501,7 @@ export default function MurajaahPage() {
                       </SelectTrigger>
                       <SelectContent>
                       {[...Array(30)].map((_, i) => (
-                        <SelectItem key={i + 1} value={(i + 1).toString()}>
+                        <SelectItem key={i + 1} value={(i + 1)}>
                           Juz {i + 1}
                           </SelectItem>
                         ))}
