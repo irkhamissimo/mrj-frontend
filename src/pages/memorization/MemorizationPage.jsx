@@ -35,9 +35,6 @@ export default function MemorizationPage() {
     const fetchSurahs = async () => {
       try {
         const response = await fetch("http://localhost:5000/api/surahs", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
         });
         const data = await response.json();
         setSurahs(data);
@@ -226,30 +223,6 @@ export default function MemorizationPage() {
       setEndVerse("");
     }
   }, [completedSessions]);
-
-  // Add effect to check for completed memorization
-  // useEffect(() => {
-  //   const checkCompletedMemorization = async () => {
-  //     try {
-  //       const response = await fetch("http://localhost:5000/api/memorizations/completed", {
-  //         headers: {
-  //           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-  //         },
-  //       });
-  //       const data = await response.json();
-        
-  //       // If there's a completed memorization, redirect to revision page
-  //       if (response.ok && data.length > 0) {
-  //         navigate(`/revision/${data[0]._id}`);
-  //         return;
-  //       }
-  //     } catch (error) {
-  //       console.error("Failed to check completed memorization:", error);
-  //     }
-  //   };
-
-  //   checkCompletedMemorization();
-  // }, [navigate]);
 
   return (
     <Card className="max-w-2xl mx-auto">
