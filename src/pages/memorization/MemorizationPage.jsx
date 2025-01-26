@@ -49,7 +49,13 @@ export default function MemorizationPage() {
   useEffect(() => {
     const fetchTodayMemorization = async () => {
       try {
-        const response = await apiCall("/memorizations/completedMemorizations");
+        const response = await apiCall("/memorizations/completedMemorizations", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        
         const data = await response.json();
         if (response.ok && data.length > 0) {
           const todayMem = data[0];
@@ -132,10 +138,14 @@ export default function MemorizationPage() {
     try {
       let response;
       
-      if (!currentEntry) {
-        // First time - start new memorization
+      // Check if current entry exists and is not completed
+      if (!currentEntry || currentEntry.status === "completed") {
+        // First time or previous entry was completed - start new memorization
         response = await apiCall("/memorizations/start", {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify({
             surahNumber: startSurahNum,
             fromVerse: startVerseNum,
@@ -150,9 +160,12 @@ export default function MemorizationPage() {
           setTimeElapsed(0);
         }
       } else {
-        // Subsequent times - start new session for existing entry
+        // Current entry exists and is not completed - start new session
         response = await apiCall(`/memorizations/${currentEntry._id}/sessions`, {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
         });
 
         const data = await response.json();
@@ -178,6 +191,9 @@ export default function MemorizationPage() {
     try {
       const response = await apiCall(`/memorizations/sessions/${activeSession._id}/pause`, {
         method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
 
       const data = await response.json();
@@ -195,6 +211,9 @@ export default function MemorizationPage() {
     try {
       const response = await apiCall(`/memorizations/${currentEntry._id}/finish`, {
         method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           confidenceLevel: 5,
           notes: "Completed memorization"
@@ -203,6 +222,12 @@ export default function MemorizationPage() {
 
       if (response.ok) {
         const data = await response.json();
+        
+        // Fetch updated completed count
+        const countResponse = await apiCall("/memorizations/completed");
+        const count = await countResponse.json();
+        setCompletedSessions(count);
+
         // Navigate to revision page with the entry ID
         navigate(`/revision/${currentEntry._id}`);
       }
@@ -223,6 +248,21 @@ export default function MemorizationPage() {
       setEndVerse("");
     }
   }, [completedSessions]);
+
+  // Fetch completed memorizations count
+  useEffect(() => {
+    const fetchCompletedCount = async () => {
+      try {
+        const response = await apiCall("/memorizations/completed");
+        const count = await response.json();
+        setCompletedSessions(count);
+      } catch (error) {
+        console.error("Failed to fetch completed memorizations:", error);
+      }
+    };
+
+    fetchCompletedCount();
+  }, []);
 
   return (
     <Card className="max-w-2xl mx-auto">
@@ -381,7 +421,7 @@ export default function MemorizationPage() {
               Selesai
             </Button>
           </div>
-    </div>
+        </div>
       </CardContent>
     </Card>
   );
