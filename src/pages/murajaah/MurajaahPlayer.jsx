@@ -42,21 +42,27 @@ export default function MurajaahPlayer() {
   useEffect(() => {
     const fetchMemorizedData = async () => {
       try {
-        const response = await apiCall("/memorized");
+        const response = await apiCall("/memorized", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
         const data = await response.json();
+        console.log(data);
         setMemorizedData(data);
 
         // Set initial values if available
         if (data.bySurah.length > 0) {
           const firstSurah = data.bySurah[0];
-          setStartSurah(firstSurah.surahNumber.toString());
+          setStartSurah(firstSurah.surahNumber);
           if (firstSurah.verses.length > 0) {
-            setStartVerse(firstSurah.verses[0].fromVerse.toString());
-            setEndVerse(firstSurah.verses[0].toVerse.toString());
+            setStartVerse(firstSurah.verses[0].fromVerse);
+            setEndVerse(firstSurah.verses[0].toVerse);
           }
         }
         if (data.byJuz.length > 0) {
-          setJuzNumber(data.byJuz[0].juzNumber.toString());
+          setJuzNumber(data.byJuz[0].juzNumber);
         }
       } catch (error) {
         console.error("Failed to fetch memorized data:", error);
@@ -77,7 +83,12 @@ export default function MurajaahPlayer() {
   useEffect(() => {
     const fetchCompletedSessions = async () => {
       try {
-        const response = await apiCall("/revisions/sessions");
+        const response = await apiCall("/revisions/sessions", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
         const data = await response.json();
         setCompletedSessions(data.totalSessionsCompleted || 0);
       } catch (error) {
@@ -93,12 +104,23 @@ export default function MurajaahPlayer() {
     if (!activeSession) return;
 
     try {
-      const response = await apiCall(`/revisions/${activeSession._id}/status`);
+      const response = await apiCall(`/revisions/${activeSession._id}/status`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
       const data = await response.json();
+      console.log(data);
       if (response.ok && data.session.completed) {
         // Fetch latest completed sessions after completion
-        const sessionsResponse = await apiCall("/revisions/sessions");
+        const sessionsResponse = await apiCall("/revisions/sessions", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
         const sessionsData = await sessionsResponse.json();
         setCompletedSessions(sessionsData.totalSessionsCompleted || 0);
         
@@ -149,6 +171,9 @@ export default function MurajaahPlayer() {
     try {
       const response = await apiCall(`/revisions/${activeSession._id}/pause`, {
         method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
 
       if (response.ok) {
@@ -208,37 +233,39 @@ export default function MurajaahPlayer() {
 
   // Get available verses for selected surah
   const getAvailableVerses = (surahNumber) => {
-    const surah = memorizedData.bySurah.find(s => s.surahNumber.toString() === surahNumber);
-    if (!surah) return [];
+    const surah = memorizedData.bySurah.find(s => s.surahNumber === surahNumber);
+    if (!surah || !surah.verses) return [];
     
-    // Get all verse ranges for this surah
+    // Parse verse range from string (e.g., "1 - 7")
+    const [start, end] = surah.verses.split(" - ").map(Number);
+    
+    // Generate array of available verses
     const allVerses = [];
-    surah.verses.forEach(verseRange => {
-      for (let i = verseRange.fromVerse; i <= verseRange.toVerse; i++) {
-        allVerses.push(i);
-      }
-    });
-    return allVerses.sort((a, b) => a - b);
+    for (let i = start; i <= end; i++) {
+      allVerses.push(i);
+    }
+    return allVerses;
   };
 
   // Get available end verses for selected surah and start verse
   const getAvailableEndVerses = (surahNumber, startVerse) => {
-    const surah = memorizedData.bySurah.find(s => s.surahNumber.toString() === surahNumber);
-    if (!surah) return [];
+    const surah = memorizedData.bySurah.find(s => s.surahNumber === surahNumber);
+    if (!surah || !surah.verses) return [];
     
-    // Find the verse range that contains the start verse
-    const relevantRange = surah.verses.find(range => 
-      range.fromVerse <= parseInt(startVerse) && range.toVerse >= parseInt(startVerse)
-    );
+    // Parse verse range from string (e.g., "1 - 7")
+    const [start, end] = surah.verses.split(" - ").map(Number);
     
-    if (!relevantRange) return [];
-
-    // Return all verses from start verse to end of range
-    const endVerses = [];
-    for (let i = parseInt(startVerse); i <= relevantRange.toVerse; i++) {
-      endVerses.push(i);
+    // If start verse is within range, return all verses from start verse to end
+    const startVerseNum = parseInt(startVerse);
+    if (startVerseNum >= start && startVerseNum <= end) {
+      const endVerses = [];
+      for (let i = startVerseNum; i <= end; i++) {
+        endVerses.push(i);
+      }
+      return endVerses;
     }
-    return endVerses;
+    
+    return [];
   };
 
   // Update end verse options when start verse changes
@@ -322,7 +349,7 @@ export default function MurajaahPlayer() {
                   </SelectTrigger>
                   <SelectContent>
                     {memorizedData.bySurah.map((surah) => (
-                      <SelectItem key={surah.surahNumber} value={surah.surahNumber.toString()}>
+                      <SelectItem key={surah.surahNumber} value={surah.surahNumber}>
                         {surah.surahName}
                       </SelectItem>
                     ))}
@@ -352,7 +379,7 @@ export default function MurajaahPlayer() {
                   </SelectTrigger>
                   <SelectContent>
                     {memorizedData.bySurah.map((surah) => (
-                      <SelectItem key={surah.surahNumber} value={surah.surahNumber.toString()}>
+                      <SelectItem key={surah.surahNumber} value={surah.surahNumber}>
                         {surah.surahName}
                       </SelectItem>
                     ))}
@@ -378,7 +405,7 @@ export default function MurajaahPlayer() {
                       ))
                       :
                       getAvailableVerses(endSurah).map((verse) => (
-                        <SelectItem key={verse} value={verse.toString()}>
+                        <SelectItem key={verse} value={verse}>
                           Ayat {verse}
                         </SelectItem>
                       ))
@@ -397,7 +424,7 @@ export default function MurajaahPlayer() {
               </SelectTrigger>
               <SelectContent>
                 {memorizedData.byJuz.map((juz) => (
-                  <SelectItem key={juz.juzNumber} value={juz.juzNumber.toString()}>
+                  <SelectItem key={juz.juzNumber} value={juz.juzNumber}>
                     Juz {juz.juzNumber}
                   </SelectItem>
                 ))}
