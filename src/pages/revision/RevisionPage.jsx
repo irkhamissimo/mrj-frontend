@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlayCircle } from "lucide-react";
+import { apiCall } from "@/lib/api";
 
 const formatDate = () => {
   const options = { 
@@ -34,7 +35,7 @@ export default function RevisionPage() {
   useEffect(() => {
     const fetchMemorization = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/memorizations/${entryId}/completed`, {
+        const response = await apiCall(`/memorizations/${entryId}/completed`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
@@ -54,7 +55,7 @@ export default function RevisionPage() {
   useEffect(() => {
     const fetchRevisionSessions = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/memorizations/${entryId}/revisions`, {
+        const response = await apiCall(`/memorizations/${entryId}/revisions`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
@@ -81,11 +82,10 @@ export default function RevisionPage() {
     if (!activeSession) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/memorizations/revisions/${activeSession._id}/complete`, {
+      const response = await apiCall(`/memorizations/revisions/${activeSession._id}/complete`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
         body: JSON.stringify({
           rating: 5 // Default rating
@@ -124,11 +124,10 @@ export default function RevisionPage() {
 
   const handleStartRevision = async (sessionNumber) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/memorizations/${entryId}/revisions`, {
+      const response = await apiCall(`/memorizations/${entryId}/revisions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
         body: JSON.stringify({
           duration: parseInt(revisionDurations[sessionNumber])
@@ -149,10 +148,10 @@ export default function RevisionPage() {
     if (!activeSession) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/memorizations/revisions/${activeSession._id}/pause`, {
+      const response = await apiCall(`/memorizations/revisions/${activeSession._id}/pause`, {
         method: "PUT",
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          "Content-Type": "application/json",
         },
       });
 
