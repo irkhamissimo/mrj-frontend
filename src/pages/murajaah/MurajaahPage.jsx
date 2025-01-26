@@ -6,6 +6,22 @@ import { Plus, ChevronUp, ChevronDown, Play, Circle, Pause } from "lucide-react"
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { apiCall } from "@/lib/api";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 function SessionIndicators({ completedSessions = 0, elapsedTime = 0, duration = 25 }) {
   // Convert duration to seconds for calculation (25 seconds for testing)
@@ -69,6 +85,28 @@ export default function MurajaahPage() {
   const [activeSession, setActiveSession] = useState(null);
   const [isPaused, setIsPaused] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [surahs, setSurahs] = useState([]);
+  const [selectedSurah, setSelectedSurah] = useState(null);
+  const [fromVerse, setFromVerse] = useState("");
+  const [toVerse, setToVerse] = useState("");
+  const [selectedJuz, setSelectedJuz] = useState("");
+  const [showSurahDialog, setShowSurahDialog] = useState(false);
+  const [showJuzDialog, setShowJuzDialog] = useState(false);
+
+  // Fetch surahs for the select dropdown
+  useEffect(() => {
+    const fetchSurahs = async () => {
+      try {
+        const response = await apiCall("/surahs");
+        const data = await response.json();
+        setSurahs(data);
+      } catch (error) {
+        console.error("Failed to fetch surahs:", error);
+      }
+    };
+
+    fetchSurahs();
+  }, []);
 
   // Fetch memorized data
   useEffect(() => {
@@ -76,6 +114,7 @@ export default function MurajaahPage() {
       try {
         // Fetch memorized data
         const memResponse = await apiCall("/memorized");
+        console.log(memResponse);
         const memData = await memResponse.json();
         setMemorizedData(memData);
 
@@ -168,18 +207,27 @@ export default function MurajaahPage() {
     try {
       const response = await apiCall("/memorized/surah", {
         method: "POST",
-        body: JSON.stringify({ surahNumber, fromVerse, toVerse }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          surahNumber: parseInt(surahNumber), 
+          fromVerse: parseInt(fromVerse), 
+          toVerse: parseInt(toVerse) 
+        }),
       });
+
       if (response.ok) {
-        // Refresh data
-        const data = await response.json();
-        setMemorizedData(prev => ({
-          ...prev,
-          bySurah: [...prev.bySurah, data]
-        }));
+        // Fetch updated memorized data
+        const memResponse = await apiCall("/memorized");
+        const memData = await memResponse.json();
+        setMemorizedData(memData);
       }
+
+      return response;
     } catch (error) {
       console.error("Failed to add memorized surah:", error);
+      throw error;
     }
   };
 
@@ -187,50 +235,44 @@ export default function MurajaahPage() {
     try {
       const response = await apiCall("/memorized/juz", {
         method: "POST",
-        body: JSON.stringify({ juzNumber }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ juzNumber: parseInt(juzNumber) }),
       });
+
       if (response.ok) {
-        // Refresh data
-        const data = await response.json();
-        setMemorizedData(prev => ({
-          ...prev,
-          byJuz: [...prev.byJuz, data]
-        }));
+        // Fetch updated memorized data
+        const memResponse = await apiCall("/memorized");
+        const memData = await memResponse.json();
+        setMemorizedData(memData);
       }
+
+      return response;
     } catch (error) {
       console.error("Failed to add memorized juz:", error);
+      throw error;
     }
   };
 
-  const handleUpdateVerses = async (surahNumber, verseIndex, direction) => {
+  const handleUpdateVerses = async (surahNumber, verses) => {
     if (loading) return;
     setLoading(true);
 
     try {
-      const surah = memorizedData.bySurah.find(s => s.surahNumber === surahNumber);
-      if (!surah) return;
+      const response = await apiCall(`/memorized/surah/${surahNumber}/verses`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ verses }),
+      });
 
-      const verse = surah.verses[verseIndex];
-      const newToVerse = direction === 'up' ? verse.toVerse + 1 : verse.toVerse - 1;
-
-      // Only update if the new verse range is valid
-      if (newToVerse >= verse.fromVerse) {
-        const response = await apiCall(`/memorized/update-verses/${surahNumber}`, {
-          method: "PUT",
-          body: JSON.stringify({
-            verses: {
-              fromVerse: verse.fromVerse,
-              toVerse: newToVerse
-            }
-          }),
-        });
-
-        if (response.ok) {
-          // Refresh the data
-          const response = await apiCall("/memorized");
-          const data = await response.json();
-          setMemorizedData(data);
-        }
+      if (response.ok) {
+        // Fetch updated memorized data
+        const memResponse = await apiCall("/memorized");
+        const memData = await memResponse.json();
+        setMemorizedData(memData);
       }
     } catch (error) {
       console.error("Failed to update verses:", error);
@@ -239,88 +281,246 @@ export default function MurajaahPage() {
     }
   };
 
+  const handleSurahChange = (value) => {
+    const surah = surahs.find(s => s.number === parseInt(value));
+    setSelectedSurah(surah);
+    setFromVerse("");
+    setToVerse("");
+  };
+
+  const handleAddSurahSubmit = async () => {
+    if (!selectedSurah || !fromVerse || !toVerse) return;
+
+    try {
+      const response = await handleAddMemorizedSurah(
+        selectedSurah.number,
+        parseInt(fromVerse),
+        parseInt(toVerse)
+      );
+
+      if (response.ok) {
+        // Fetch updated data
+        const memResponse = await apiCall("/memorized");
+        const memData = await memResponse.json();
+        setMemorizedData(memData);
+
+        // Reset form
+        setSelectedSurah(null);
+        setFromVerse("");
+        setToVerse("");
+        setShowSurahDialog(false);
+      }
+    } catch (error) {
+      console.error("Failed to add memorized surah:", error);
+    }
+  };
+
+  const handleAddJuzSubmit = async () => {
+    if (!selectedJuz) return;
+
+    try {
+      const response = await handleAddMemorizedJuz(parseInt(selectedJuz));
+
+      if (response.ok) {
+        // Fetch updated data
+        const memResponse = await apiCall("/memorized");
+        const memData = await memResponse.json();
+        setMemorizedData(memData);
+
+        // Reset form
+        setSelectedJuz("");
+        setShowJuzDialog(false);
+      }
+    } catch (error) {
+      console.error("Failed to add memorized juz:", error);
+    }
+  };
+
   return (
     <Card className="max-w-2xl mx-auto">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-2xl font-bold">Murajaah</CardTitle>
-        <div className="flex items-center gap-4">
           <SessionIndicators 
             completedSessions={completedSessions}
             elapsedTime={elapsedTime}
-            duration={25}
           />
-        </div>
-      </CardHeader>
+        </CardHeader>
+
       <CardContent>
-        <Tabs defaultValue="surat" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="surat">Surat</TabsTrigger>
+      <Tabs defaultValue="surah" className="w-full">
+        <TabsList className= "grid w-full grid-cols-2">
+          <TabsTrigger value="surah">Surah</TabsTrigger>
             <TabsTrigger value="juz">Juz</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="surat" className="space-y-4">
+        <TabsContent value="surah" className="space-y-4">
             {memorizedData.bySurah.map((surah) => (
-              <div key={surah.surahNumber} className="p-4 border rounded-lg">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-medium">
-                    {surah.surahName} ({surah.surahNumber}) - Ayat {surah.verses.map((verse, idx) => (
-                      <span key={idx}>
-                        {verse.fromVerse}-{verse.toVerse}
-                        {idx < surah.verses.length - 1 ? ", " : ""}
-                      </span>
-                    ))}
-                  </h3>
+              <Card key={surah.surahNumber}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    {surah.surahName} ({surah.surahEnglishName})
+                  </CardTitle>
                   <Button
                     variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
+                    size="sm"
                     onClick={() => handleStartMurajaah('surah', surah.surahNumber)}
                   >
+                    {activeSession?.surahNumber === surah.surahNumber ? (
+                      isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />
+                    ) : (
                     <Play className="h-4 w-4" />
+                    )}
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-sm">
+                    Ayat: {surah.verses}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+
+            <Dialog open={showSurahDialog} onOpenChange={setShowSurahDialog}>
+              <DialogTrigger asChild>
+              <Button className="w-full">
+                <Plus className="mr-2 h-4 w-4" /> Tambah Surat yang Dihafal
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Tambah Surat yang Dihafal</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                  <Label htmlFor="surah">Surat</Label>
+                    <Select
+                    value={selectedSurah}
+                    onValueChange={setSelectedSurah}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih surat" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {surahs.map((surah) => (
+                        <SelectItem key={surah.number} value={surah.number.toString()}>
+                            {surah.name} ({surah.englishName})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="fromVerse">Dari Ayat</Label>
+                      <Input
+                        id="fromVerse"
+                        type="number"
+                        value={fromVerse}
+                        onChange={(e) => setFromVerse(e.target.value)}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="toVerse">Sampai Ayat</Label>
+                      <Input
+                        id="toVerse"
+                        type="number"
+                        value={toVerse}
+                        onChange={(e) => setToVerse(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <Button
+                  onClick={async () => {
+                    if (selectedSurah && fromVerse && toVerse) {
+                      await handleAddMemorizedSurah(selectedSurah, fromVerse, toVerse);
+                      setShowSurahDialog(false);
+                      setSelectedSurah(null);
+                      setFromVerse("");
+                      setToVerse("");
+                    }
+                  }}
+                >
+                  Simpan
                   </Button>
                 </div>
-              </div>
-            ))}
-            <Button className="w-full" variant="outline">
-              <Plus className="w-4 h-4 mr-2" />
-              Tambah Surat yang Dihafal
-            </Button>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           <TabsContent value="juz" className="space-y-4">
             {memorizedData.byJuz.map((juz) => (
-              <div key={juz.juzNumber} className="p-4 border rounded-lg">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-medium">Juz {juz.juzNumber}</h3>
+              <Card key={juz.juzNumber}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Juz {juz.juzNumber}
+                  </CardTitle>
                   <Button
                     variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
+                    size="sm"
                     onClick={() => handleStartMurajaah('juz', juz.juzNumber)}
                   >
+                    {activeSession?.juzNumber === juz.juzNumber ? (
+                      isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />
+                    ) : (
                     <Play className="h-4 w-4" />
+                    )}
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-sm space-y-1">
+                    {Object.values(juz.surahs).map((surah) => (
+                      <div key={surah.surahNumber}>
+                        {surah.surahName}: {surah.verses}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+
+            <Dialog open={showJuzDialog} onOpenChange={setShowJuzDialog}>
+              <DialogTrigger asChild>
+              <Button className="w-full">
+                <Plus className="mr-2 h-4 w-4" /> Tambah Juz yang Sudah Dihafal
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Tambah Juz yang Sudah Dihafal</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                  <Label htmlFor="juz">Juz</Label>
+                    <Select
+                      value={selectedJuz}
+                    onValueChange={setSelectedJuz}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih juz" />
+                      </SelectTrigger>
+                      <SelectContent>
+                      {[...Array(30)].map((_, i) => (
+                        <SelectItem key={i + 1} value={(i + 1).toString()}>
+                          Juz {i + 1}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                  onClick={async () => {
+                    if (selectedJuz) {
+                      await handleAddMemorizedJuz(selectedJuz);
+                      setShowJuzDialog(false);
+                      setSelectedJuz("");
+                    }
+                  }}
+                >
+                  Simpan
                   </Button>
                 </div>
-                <div className="mt-2 space-y-2">
-                  {Object.values(juz.surahs).map((surah) => (
-                    <div key={surah.surahNumber} className="ml-4">
-                      <p className="text-sm">
-                        {surah.surahName} - Ayat {surah.verses.map((verse, idx) => (
-                          <span key={idx}>
-                            {verse.fromVerse}-{verse.toVerse}
-                            {idx < surah.verses.length - 1 ? ", " : ""}
-                          </span>
-                        ))}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-            <Button className="w-full" variant="outline">
-              <Plus className="w-4 h-4 mr-2" />
-              Tambah Juz yang Sudah Dihafal
-            </Button>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
         </Tabs>
       </CardContent>
