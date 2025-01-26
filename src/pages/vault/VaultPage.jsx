@@ -26,6 +26,9 @@ export default function VaultPage() {
     try {
       const response = await apiCall(`/vault/${vaultId}/verify`, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           rating: 5,
           notes: "Verified memorization"
