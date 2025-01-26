@@ -105,7 +105,6 @@ export default function MurajaahPage() {
           },
         });
         const data = await response.json();
-        console.log(data);
         setSurahs(data);
       } catch (error) {
         console.error("Failed to fetch surahs:", error);

@@ -49,7 +49,6 @@ export default function MurajaahPlayer() {
           },
         });
         const data = await response.json();
-        console.log(data);
         setMemorizedData(data);
 
         // Set initial values if available
@@ -112,7 +111,6 @@ export default function MurajaahPlayer() {
       });
 
       const data = await response.json();
-      console.log(data);
       if (response.ok && data.session.completed) {
         // Fetch latest completed sessions after completion
         const sessionsResponse = await apiCall("/revisions/sessions", {
@@ -150,7 +148,6 @@ export default function MurajaahPlayer() {
           duration: duration
         }),
       });
-      console.log(response);
 
       if (response.ok) {
         const data = await response.json();
