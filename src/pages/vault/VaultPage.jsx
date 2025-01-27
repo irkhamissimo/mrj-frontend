@@ -11,7 +11,12 @@ export default function VaultPage() {
   useEffect(() => {
     const fetchVaultEntries = async () => {
       try {
-        const response = await apiCall("/vault");
+        const response = await apiCall("/vault", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
         const data = await response.json();
         setVaultEntries(data);
       } catch (error) {
