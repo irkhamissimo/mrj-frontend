@@ -2,7 +2,14 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, ChevronUp, ChevronDown, Play, Circle, Pause } from "lucide-react";
+import {
+  Plus,
+  ChevronUp,
+  ChevronDown,
+  Play,
+  Circle,
+  Pause,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { apiCall } from "@/lib/api";
@@ -24,7 +31,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { popoverClasses } from "@mui/material";
 
-function SessionIndicators({ completedSessions = 0, elapsedTime = 0, duration = 25 }) {
+function SessionIndicators({
+  completedSessions = 0,
+  elapsedTime = 0,
+  duration = 25,
+}) {
   // Convert duration to seconds for calculation (25 seconds for testing)
   const durationInSeconds = duration; // Changed from duration * 60
   const progress = (elapsedTime / durationInSeconds) * 100;
@@ -33,7 +44,9 @@ function SessionIndicators({ completedSessions = 0, elapsedTime = 0, duration = 
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return `${minutes.toString().padStart(2, "0")}:${remainingSeconds
+      .toString()
+      .padStart(2, "0")}`;
   };
 
   return (
@@ -60,17 +73,21 @@ function SessionIndicators({ completedSessions = 0, elapsedTime = 0, duration = 
             strokeDashoffset={circumference - (progress / 100) * circumference}
           />
         </svg>
-        <span className="absolute text-sm font-medium">{formatTime(elapsedTime)}</span>
+        <span className="absolute text-sm font-medium">
+          {formatTime(elapsedTime)}
+        </span>
       </div>
       {/* Small session indicators */}
       <div className="flex gap-1">
         {[...Array(4)].map((_, idx) => (
-          <Circle 
-            key={idx} 
+          <Circle
+            key={idx}
             className={cn(
               "w-4 h-4",
-              idx < completedSessions ? "fill-green-500 text-green-500" : "fill-transparent"
-            )} 
+              idx < completedSessions
+                ? "fill-green-500 text-green-500"
+                : "fill-transparent"
+            )}
           />
         ))}
       </div>
@@ -80,7 +97,10 @@ function SessionIndicators({ completedSessions = 0, elapsedTime = 0, duration = 
 
 export default function MurajaahPage() {
   const navigate = useNavigate();
-  const [memorizedData, setMemorizedData] = useState({ bySurah: [], byJuz: [] });
+  const [memorizedData, setMemorizedData] = useState({
+    bySurah: [],
+    byJuz: [],
+  });
   const [loading, setLoading] = useState(false);
   const [completedSessions, setCompletedSessions] = useState(0);
   const [activeSession, setActiveSession] = useState(null);
@@ -137,9 +157,9 @@ export default function MurajaahPage() {
 
   // Load session state from localStorage on mount
   useEffect(() => {
-    const savedSession = localStorage.getItem('activeSession');
-    const savedIsPaused = localStorage.getItem('isPaused');
-    const savedElapsedTime = localStorage.getItem('elapsedTime');
+    const savedSession = localStorage.getItem("activeSession");
+    const savedIsPaused = localStorage.getItem("isPaused");
+    const savedElapsedTime = localStorage.getItem("elapsedTime");
 
     if (savedSession) setActiveSession(JSON.parse(savedSession));
     if (savedIsPaused) setIsPaused(JSON.parse(savedIsPaused));
@@ -149,12 +169,12 @@ export default function MurajaahPage() {
   // Save session state to localStorage when it changes
   useEffect(() => {
     if (activeSession) {
-      localStorage.setItem('activeSession', JSON.stringify(activeSession));
+      localStorage.setItem("activeSession", JSON.stringify(activeSession));
     } else {
-      localStorage.removeItem('activeSession');
+      localStorage.removeItem("activeSession");
     }
-    localStorage.setItem('isPaused', JSON.stringify(isPaused));
-    localStorage.setItem('elapsedTime', elapsedTime.toString());
+    localStorage.setItem("isPaused", JSON.stringify(isPaused));
+    localStorage.setItem("elapsedTime", elapsedTime.toString());
   }, [activeSession, isPaused, elapsedTime]);
 
   // Effect for checking session status
@@ -165,14 +185,21 @@ export default function MurajaahPage() {
       if (!activeSession) return;
 
       try {
-        const response = await apiCall(`/revisions/${activeSession._id}/status`);
+        const response = await apiCall(
+          `/revisions/${activeSession._id}/status`
+        );
         const data = await response.json();
+        // Check if the response is valid and contains a session
+        if (!data || !data.session) {
+          // console.error("Session data is not available:", data);
+          return; // Exit if session data is not available
+        }
 
         if (data.session.completed) {
           setActiveSession(null);
           setElapsedTime(0);
-          localStorage.removeItem('activeSession');
-          
+          localStorage.removeItem("activeSession");
+
           // Fetch updated completed sessions count
           const sessionsResponse = await apiCall("/revisions/sessions");
           const sessionsData = await sessionsResponse.json();
@@ -182,7 +209,7 @@ export default function MurajaahPage() {
           const startTime = new Date(data.session.startTime);
           const now = new Date();
           const elapsed = Math.floor((now - startTime) / 1000);
-          const pauseDuration = (data.session.totalPauseDuration || 0);
+          const pauseDuration = data.session.totalPauseDuration || 0;
           setElapsedTime(Math.min(25, elapsed - pauseDuration));
           setIsPaused(data.session.isPaused);
         }
@@ -215,10 +242,10 @@ export default function MurajaahPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ 
-          surahNumber: parseInt(surahNumber), 
-          fromVerse: parseInt(fromVerse), 
-          toVerse: parseInt(toVerse) 
+        body: JSON.stringify({
+          surahNumber: parseInt(surahNumber),
+          fromVerse: parseInt(fromVerse),
+          toVerse: parseInt(toVerse),
         }),
       });
 
@@ -287,7 +314,7 @@ export default function MurajaahPage() {
   };
 
   const handleSurahChange = (value) => {
-    const surah = surahs.find(s => s.number === parseInt(value));
+    const surah = surahs.find((s) => s.number === parseInt(value));
     setSelectedSurah(surah);
     setFromVerse("");
     setToVerse("");
@@ -345,20 +372,20 @@ export default function MurajaahPage() {
     <Card className="max-w-2xl mx-auto">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-2xl font-bold">Murajaah</CardTitle>
-          <SessionIndicators 
-            completedSessions={completedSessions}
-            elapsedTime={elapsedTime}
-          />
-        </CardHeader>
+        <SessionIndicators
+          completedSessions={completedSessions}
+          elapsedTime={elapsedTime}
+        />
+      </CardHeader>
 
       <CardContent>
-      <Tabs defaultValue="surah" className="w-full">
-        <TabsList className= "grid w-full grid-cols-2">
-          <TabsTrigger value="surah">Surah</TabsTrigger>
+        <Tabs defaultValue="surah" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="surah">Surah</TabsTrigger>
             <TabsTrigger value="juz">Juz</TabsTrigger>
           </TabsList>
 
-        <TabsContent value="surah" className="space-y-4">
+          <TabsContent value="surah" className="space-y-4">
             {memorizedData.bySurah.map((surah) => (
               <Card key={surah.surahNumber}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -368,12 +395,18 @@ export default function MurajaahPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleStartMurajaah('surah', surah.surahNumber)}
+                    onClick={() =>
+                      handleStartMurajaah("surah", surah.surahNumber)
+                    }
                   >
                     {activeSession?.surahNumber === surah.surahNumber ? (
-                      isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />
+                      isPaused ? (
+                        <Play className="h-4 w-4" />
+                      ) : (
+                        <Pause className="h-4 w-4" />
+                      )
                     ) : (
-                    <Play className="h-4 w-4" />
+                      <Play className="h-4 w-4" />
                     )}
                   </Button>
                 </CardHeader>
@@ -382,8 +415,8 @@ export default function MurajaahPage() {
 
             <Dialog open={showSurahDialog} onOpenChange={setShowSurahDialog}>
               <DialogTrigger asChild>
-              <Button className="w-full">
-                <Plus className="mr-2 h-4 w-4" /> Tambah Surat yang Dihafal
+                <Button className="w-full">
+                  <Plus className="mr-2 h-4 w-4" /> Tambah Surat yang Dihafal
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -392,17 +425,17 @@ export default function MurajaahPage() {
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                  <Label htmlFor="surah">Surat</Label>
+                    <Label htmlFor="surah">Surat</Label>
                     <Select
-                    value={selectedSurah}
-                    onValueChange={setSelectedSurah}
+                      value={selectedSurah}
+                      onValueChange={setSelectedSurah}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Pilih surat" />
                       </SelectTrigger>
                       <SelectContent>
                         {surahs.map((surah) => (
-                        <SelectItem key={surah.number} value={surah.number}>
+                          <SelectItem key={surah.number} value={surah.number}>
                             {surah.name} ({surah.englishName})
                           </SelectItem>
                         ))}
@@ -430,17 +463,21 @@ export default function MurajaahPage() {
                     </div>
                   </div>
                   <Button
-                  onClick={async () => {
-                    if (selectedSurah && fromVerse && toVerse) {
-                      await handleAddMemorizedSurah(selectedSurah, fromVerse, toVerse);
-                      setShowSurahDialog(false);
-                      setSelectedSurah(null);
-                      setFromVerse("");
-                      setToVerse("");
-                    }
-                  }}
-                >
-                  Simpan
+                    onClick={async () => {
+                      if (selectedSurah && fromVerse && toVerse) {
+                        await handleAddMemorizedSurah(
+                          selectedSurah,
+                          fromVerse,
+                          toVerse
+                        );
+                        setShowSurahDialog(false);
+                        setSelectedSurah(null);
+                        setFromVerse("");
+                        setToVerse("");
+                      }
+                    }}
+                  >
+                    Simpan
                   </Button>
                 </div>
               </DialogContent>
@@ -457,12 +494,16 @@ export default function MurajaahPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleStartMurajaah('juz', juz.juzNumber)}
+                    onClick={() => handleStartMurajaah("juz", juz.juzNumber)}
                   >
                     {activeSession?.juzNumber === juz.juzNumber ? (
-                      isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />
+                      isPaused ? (
+                        <Play className="h-4 w-4" />
+                      ) : (
+                        <Pause className="h-4 w-4" />
+                      )
                     ) : (
-                    <Play className="h-4 w-4" />
+                      <Play className="h-4 w-4" />
                     )}
                   </Button>
                 </CardHeader>
@@ -480,8 +521,9 @@ export default function MurajaahPage() {
 
             <Dialog open={showJuzDialog} onOpenChange={setShowJuzDialog}>
               <DialogTrigger asChild>
-              <Button className="w-full">
-                <Plus className="mr-2 h-4 w-4" /> Tambah Juz yang Sudah Dihafal
+                <Button className="w-full">
+                  <Plus className="mr-2 h-4 w-4" /> Tambah Juz yang Sudah
+                  Dihafal
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -490,33 +532,30 @@ export default function MurajaahPage() {
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                  <Label htmlFor="juz">Juz</Label>
-                    <Select
-                      value={selectedJuz}
-                    onValueChange={setSelectedJuz}
-                    >
+                    <Label htmlFor="juz">Juz</Label>
+                    <Select value={selectedJuz} onValueChange={setSelectedJuz}>
                       <SelectTrigger>
                         <SelectValue placeholder="Pilih juz" />
                       </SelectTrigger>
                       <SelectContent>
-                      {[...Array(30)].map((_, i) => (
-                        <SelectItem key={i + 1} value={(i + 1)}>
-                          Juz {i + 1}
+                        {[...Array(30)].map((_, i) => (
+                          <SelectItem key={i + 1} value={i + 1}>
+                            Juz {i + 1}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <Button
-                  onClick={async () => {
-                    if (selectedJuz) {
-                      await handleAddMemorizedJuz(selectedJuz);
-                      setShowJuzDialog(false);
-                      setSelectedJuz("");
-                    }
-                  }}
-                >
-                  Simpan
+                    onClick={async () => {
+                      if (selectedJuz) {
+                        await handleAddMemorizedJuz(selectedJuz);
+                        setShowJuzDialog(false);
+                        setSelectedJuz("");
+                      }
+                    }}
+                  >
+                    Simpan
                   </Button>
                 </div>
               </DialogContent>
@@ -526,4 +565,4 @@ export default function MurajaahPage() {
       </CardContent>
     </Card>
   );
-} 
+}
