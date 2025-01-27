@@ -75,51 +75,183 @@ export default function MemorizationPage() {
     fetchTodayMemorization();
   }, []);
 
-  // Modify handleSessionComplete to properly update UI
-  const handleSessionComplete = async () => {
-    try {
-      const response = await apiCall(`/memorizations/sessions/${activeSession._id}/status`);
-
-      const data = await response.json();
-      if (response.ok && data.session.completed) {
-        setCompletedSessions(prev => prev + 1);
-        setActiveSession(null);
-        setIsPaused(false);
-        setTimeElapsed(0);
-      }
-    } catch (error) {
-      console.error("Failed to complete session:", error);
-    }
-  };
-
-  // Update the timer effect
+  // Effect for checking session status and updating timer
   useEffect(() => {
-    let interval;
-    if (activeSession && !isPaused) {
-      interval = setInterval(() => {
-        setTimeElapsed((prev) => {
-          if (prev >= 25) {
-            clearInterval(interval);
-            handleSessionComplete();
-            return 25;
-          }
-          return prev + 1;
-        });
-      }, 1000);
+    let timerInterval;
+    let statusInterval;
+    
+    const updateTimer = () => {
+      if (!activeSession || isPaused) return;
 
-      // Add an additional interval to check session status
-      const statusInterval = setInterval(() => {
-        handleSessionComplete();
-      }, 1000); // Check every second
+      // Get session start time from localStorage or set it
+      let sessionStartTime = localStorage.getItem('sessionStartTime');
+      if (!sessionStartTime && activeSession) {
+        sessionStartTime = new Date(activeSession.startTime).getTime();
+        localStorage.setItem('sessionStartTime', sessionStartTime);
+      }
+
+      if (sessionStartTime) {
+        const now = Date.now();
+        const pauseDuration = (activeSession.totalPauseDuration || 0) * 60 * 1000; // Convert minutes to milliseconds
+        const elapsedMs = now - parseInt(sessionStartTime) - pauseDuration;
+        const elapsedSeconds = Math.floor(elapsedMs / 1000);
+        setTimeElapsed(Math.min(25, Math.max(0, elapsedSeconds)));
+      }
+    };
+
+    const checkSessionStatus = async () => {
+      if (!activeSession) return;
+
+      try {
+        const response = await apiCall(`/memorizations/sessions/${activeSession._id}/status`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        const data = await response.json();
+
+        if (response.ok) {
+          if (data.session.completed) {
+            setActiveSession(null);
+            setTimeElapsed(25);
+            localStorage.removeItem('sessionStartTime');
+            
+            // Fetch updated completed count
+            const countResponse = await apiCall("/memorizations/countCompletedMemorizations");
+            const count = await countResponse.json();
+            setCompletedSessions(count);
+
+            // Fetch updated today's memorization data
+            const memResponse = await apiCall("/memorizations/completedMemorizations", {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            });
+            
+            const memData = await memResponse.json();
+            if (memResponse.ok && memData.length > 0) {
+              setTodayMemorization(memData[0]);
+            }
+          } else {
+            setIsPaused(data.session.isPaused || false);
+            // Update activeSession with latest data
+            setActiveSession(data.session);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to check session status:", error);
+      }
+    };
+
+    if (activeSession) {
+      // Initial update
+      updateTimer();
+      checkSessionStatus();
+
+      // Set up intervals
+      timerInterval = setInterval(updateTimer, 100); // More frequent updates for smoother timer
+      statusInterval = setInterval(checkSessionStatus, 1000); // Check status every second
 
       return () => {
-        clearInterval(interval);
+        clearInterval(timerInterval);
         clearInterval(statusInterval);
       };
+    } else {
+      // Clean up when session ends
+      localStorage.removeItem('sessionStartTime');
     }
-    return () => {};
   }, [activeSession, isPaused]);
 
+  // Clean up localStorage on component unmount
+  useEffect(() => {
+    return () => {
+      localStorage.removeItem('sessionStartTime');
+    };
+  }, []);
+
+  // Add effect to initialize state from localStorage on mount
+  useEffect(() => {
+    const initializeFromStorage = async () => {
+      try {
+        // Get active session from localStorage
+        const storedSession = localStorage.getItem('activeSession');
+        const storedEntry = localStorage.getItem('currentEntry');
+        
+        if (storedSession && storedEntry) {
+          const session = JSON.parse(storedSession);
+          const entry = JSON.parse(storedEntry);
+          
+          // Verify if session is still active via API
+          const response = await apiCall(`/memorizations/sessions/${session._id}/status`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+          const data = await response.json();
+          
+          if (response.ok && !data.session.completed) {
+            setActiveSession(session);
+            setCurrentEntry(entry);
+            setIsPaused(data.session.isPaused || false);
+            
+            // Set other related states
+            setStartSurah(entry.surahNumber.toString());
+            setStartVerse(entry.fromVerse.toString());
+            setEndSurah(entry.surahNumber.toString());
+            setEndVerse(entry.toVerse.toString());
+          } else {
+            // Clear storage if session is completed or invalid
+            // localStorage.removeItem('activeSession');
+            // localStorage.removeItem('currentEntry');
+            localStorage.removeItem('sessionStartTime');
+          }
+        }
+      } catch (error) {
+        console.error("Failed to initialize from storage:", error);
+      }
+    };
+
+    initializeFromStorage();
+  }, []);
+
+  // Initialize state from localStorage on mount
+  useEffect(() => {
+    const storedEntry = localStorage.getItem('currentEntry');
+    const storedSession = localStorage.getItem('activeSession');
+    const storedCompletedSessions = localStorage.getItem('completedSessions');
+
+    if (storedEntry) {
+      setCurrentEntry(JSON.parse(storedEntry));
+    }
+    if (storedSession) {
+      setActiveSession(JSON.parse(storedSession));
+    }
+    if (storedCompletedSessions) {
+      setCompletedSessions(parseInt(storedCompletedSessions, 10));
+    }
+  }, []);
+
+  // Update localStorage whenever currentEntry, activeSession, or completedSessions changes
+  useEffect(() => {
+    if (currentEntry) {
+      localStorage.setItem('currentEntry', JSON.stringify(currentEntry));
+    }
+  }, [currentEntry]);
+
+  useEffect(() => {
+    if (activeSession) {
+      localStorage.setItem('activeSession', JSON.stringify(activeSession));
+    }
+  }, [activeSession]);
+
+  useEffect(() => {
+    localStorage.setItem('completedSessions', completedSessions);
+  }, [completedSessions]);
+
+  // Modify handleStartMemorization to store session data
   const handleStartMemorization = async () => {
     if (!startSurah || !startVerse || !endSurah || !endVerse) return;
 
@@ -137,6 +269,7 @@ export default function MemorizationPage() {
 
     try {
       let response;
+      console.log(currentEntry)
       
       // Check if current entry exists and is not completed
       if (!currentEntry || currentEntry.status === "completed") {
@@ -154,11 +287,18 @@ export default function MemorizationPage() {
         });
 
         const data = await response.json();
-        if (response.ok) {
-          setCurrentEntry(data.entry);
-          setActiveSession(data.session);
-          setTimeElapsed(0);
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to start memorization');
         }
+
+        setCurrentEntry(data.entry);
+        setActiveSession(data.session);
+        setTimeElapsed(0);
+        
+        // Store in localStorage
+        localStorage.setItem('currentEntry', JSON.stringify(data.entry));
+        localStorage.setItem('activeSession', JSON.stringify(data.session));
+        localStorage.setItem('sessionStartTime', new Date(data.session.startTime).getTime());
       } else {
         // Current entry exists and is not completed - start new session
         response = await apiCall(`/memorizations/${currentEntry._id}/sessions`, {
@@ -169,13 +309,29 @@ export default function MemorizationPage() {
         });
 
         const data = await response.json();
-        if (response.ok) {
-          setActiveSession(data);
-          setTimeElapsed(0);
+        if (!response.ok) {
+          // Handle specific error cases
+          if (data.error === "Previous session is still in progress") {
+            alert("Previous session is still in progress. Please wait for it to complete.");
+            return;
+          }
+          if (data.error === "Maximum 4 sessions allowed per entry") {
+            alert("You have completed all sessions for today.");
+            return;
+          }
+          throw new Error(data.error || 'Failed to start session');
         }
+
+        setActiveSession(data);
+        setTimeElapsed(0);
+        
+        // Store in localStorage
+        localStorage.setItem('activeSession', JSON.stringify(data));
+        localStorage.setItem('sessionStartTime', new Date(data.startTime).getTime());
       }
     } catch (error) {
       console.error("Failed to start memorization:", error);
+      alert(error.message);
     }
   };
 
@@ -185,6 +341,7 @@ export default function MemorizationPage() {
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
+  // Modify handleTogglePause to update localStorage
   const handleTogglePause = async () => {
     if (!activeSession) return;
 
@@ -196,9 +353,13 @@ export default function MemorizationPage() {
         },
       });
 
-      const data = await response.json();
       if (response.ok) {
+        const data = await response.json();
         setIsPaused(!isPaused);
+        setActiveSession(data.session);
+        
+        // Update localStorage
+        localStorage.setItem('activeSession', JSON.stringify(data.session));
       }
     } catch (error) {
       console.error("Failed to toggle pause:", error);
@@ -224,7 +385,12 @@ export default function MemorizationPage() {
         const data = await response.json();
         
         // Fetch updated completed count
-        const countResponse = await apiCall("/memorizations/completed");
+        const countResponse = await apiCall("/memorizations/completed", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
         const count = await countResponse.json();
         setCompletedSessions(count);
 
@@ -249,19 +415,46 @@ export default function MemorizationPage() {
     }
   }, [completedSessions]);
 
-  // Fetch completed memorizations count
+  // Add effect to fetch initial completed sessions count
   useEffect(() => {
     const fetchCompletedCount = async () => {
       try {
-        const response = await apiCall("/memorizations/completed");
+        const response = await apiCall("/memorizations/countCompletedMemorizations", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
         const count = await response.json();
         setCompletedSessions(count);
       } catch (error) {
-        console.error("Failed to fetch completed memorizations:", error);
+        console.error("Failed to fetch completed count:", error);
       }
     };
 
     fetchCompletedCount();
+  }, []);
+
+  // Add storage event listener for cross-tab synchronization
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'activeSession') {
+        if (e.newValue) {
+          setActiveSession(JSON.parse(e.newValue));
+        } else {
+          setActiveSession(null);
+        }
+      } else if (e.key === 'currentEntry') {
+        if (e.newValue) {
+          setCurrentEntry(JSON.parse(e.newValue));
+        } else {
+          setCurrentEntry(null);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   return (
@@ -415,7 +608,7 @@ export default function MemorizationPage() {
             <Button
               className="flex-1"
               onClick={handleFinishMemorization}
-              disabled={completedSessions === 0 || todayMemorization?.status === "completed"}
+              disabled={!currentEntry}
               variant="secondary"
             >
               Selesai
