@@ -11,8 +11,7 @@ import { apiCall } from "@/lib/api";
 
 export default function MurajaahPlayer() {
   const navigate = useNavigate();
-  const { type: initialType, identifier } = useParams();
-  const [type, setType] = useState(initialType || 'juz');
+  const [type, setType] = useState('juz');
   const [memorizedData, setMemorizedData] = useState({ bySurah: [], byJuz: [] });
   const [startSurah, setStartSurah] = useState("");
   const [endSurah, setEndSurah] = useState("");
@@ -23,14 +22,14 @@ export default function MurajaahPlayer() {
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [completedSessions, setCompletedSessions] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [verifiedMemorizations, setVerifiedMemorizations] = useState([]);
 
   // Sync UI with URL type parameter
   useEffect(() => {
-    if (initialType) {
-      setType(initialType);
+    if (type) {
+      setType(type);
     }
-  }, [initialType]);
+  }, [type]);
+  console.log(type);
 
   // Handle toggle change
   const handleTypeChange = (checked) => {
