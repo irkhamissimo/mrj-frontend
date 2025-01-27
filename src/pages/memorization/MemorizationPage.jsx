@@ -237,8 +237,6 @@ export default function MemorizationPage() {
     }
   }, [activeSession]);
 
-  console.log('completedSessions', completedSessions)
-
   // Modify handleStartMemorization to store session data
   const handleStartMemorization = async () => {
     if (!startSurah || !startVerse || !endSurah || !endVerse) return;
