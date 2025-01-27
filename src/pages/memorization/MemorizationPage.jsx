@@ -55,7 +55,6 @@ export default function MemorizationPage() {
             "Content-Type": "application/json",
           },
         });
-        
         const data = await response.json();
         if (response.ok && data.length > 0) {
           const todayMem = data[0];
@@ -117,11 +116,6 @@ export default function MemorizationPage() {
             setTimeElapsed(25);
             localStorage.removeItem('sessionStartTime');
             
-            // Fetch updated completed count
-            const countResponse = await apiCall("/memorizations/countCompletedMemorizations");
-            const count = await countResponse.json();
-            setCompletedSessions(count);
-
             // Fetch updated today's memorization data
             const memResponse = await apiCall("/memorizations/completedMemorizations", {
               method: "GET",
@@ -217,11 +211,10 @@ export default function MemorizationPage() {
     initializeFromStorage();
   }, []);
 
-  // Initialize state from localStorage on mount
+  // Remove localStorage handling for completedSessions since it comes from todayMemorization
   useEffect(() => {
     const storedEntry = localStorage.getItem('currentEntry');
     const storedSession = localStorage.getItem('activeSession');
-    const storedCompletedSessions = localStorage.getItem('completedSessions');
 
     if (storedEntry) {
       setCurrentEntry(JSON.parse(storedEntry));
@@ -229,12 +222,9 @@ export default function MemorizationPage() {
     if (storedSession) {
       setActiveSession(JSON.parse(storedSession));
     }
-    if (storedCompletedSessions) {
-      setCompletedSessions(parseInt(storedCompletedSessions, 10));
-    }
   }, []);
 
-  // Update localStorage whenever currentEntry, activeSession, or completedSessions changes
+  // Remove completedSessions from localStorage updates
   useEffect(() => {
     if (currentEntry) {
       localStorage.setItem('currentEntry', JSON.stringify(currentEntry));
@@ -247,9 +237,7 @@ export default function MemorizationPage() {
     }
   }, [activeSession]);
 
-  useEffect(() => {
-    localStorage.setItem('completedSessions', completedSessions);
-  }, [completedSessions]);
+  console.log('completedSessions', completedSessions)
 
   // Modify handleStartMemorization to store session data
   const handleStartMemorization = async () => {
@@ -269,7 +257,6 @@ export default function MemorizationPage() {
 
     try {
       let response;
-      console.log(currentEntry)
       
       // Check if current entry exists and is not completed
       if (!currentEntry || currentEntry.status === "completed") {
@@ -367,10 +354,9 @@ export default function MemorizationPage() {
   };
 
   const handleFinishMemorization = async () => {
-    if (!currentEntry || completedSessions === 0) return;
-
+    if (!currentEntry) return;
     try {
-      const response = await apiCall(`/memorizations/${currentEntry._id}/finish`, {
+      const response = await apiCall(`/memorizations/${currentEntry.id}/finish`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -382,17 +368,19 @@ export default function MemorizationPage() {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        
-        // Fetch updated completed count
-        const countResponse = await apiCall("/memorizations/completed", {
+        // After finishing, fetch updated todayMemorization which includes completedSessions
+        const memResponse = await apiCall("/memorizations/completedMemorizations", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
           },
         });
-        const count = await countResponse.json();
-        setCompletedSessions(count);
+        
+        const memData = await memResponse.json();
+        if (memResponse.ok && memData.length > 0) {
+          setTodayMemorization(memData[0]);
+          setCompletedSessions(memData[0].totalSessionsCompleted || 0);
+        }
 
         // Navigate to revision page with the entry ID
         navigate(`/revision/${currentEntry._id}`);
@@ -401,39 +389,6 @@ export default function MemorizationPage() {
       console.error("Failed to finish memorization:", error);
     }
   };
-
-  // Add cleanup when all sessions are completed
-  useEffect(() => {
-    if (completedSessions >= 4) {
-      // Reset everything after all sessions are done
-      setCurrentEntry(null);
-      setCompletedSessions(0);
-      setStartSurah(null);
-      setStartVerse("");
-      setEndSurah(null);
-      setEndVerse("");
-    }
-  }, [completedSessions]);
-
-  // Add effect to fetch initial completed sessions count
-  useEffect(() => {
-    const fetchCompletedCount = async () => {
-      try {
-        const response = await apiCall("/memorizations/countCompletedMemorizations", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        const count = await response.json();
-        setCompletedSessions(count);
-      } catch (error) {
-        console.error("Failed to fetch completed count:", error);
-      }
-    };
-
-    fetchCompletedCount();
-  }, []);
 
   // Add storage event listener for cross-tab synchronization
   useEffect(() => {
@@ -608,7 +563,6 @@ export default function MemorizationPage() {
             <Button
               className="flex-1"
               onClick={handleFinishMemorization}
-              disabled={!currentEntry}
               variant="secondary"
             >
               Selesai
