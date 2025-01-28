@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiCall } from "@/lib/api";
+import { data } from "autoprefixer";
 
 export default function MurajaahPlayer() {
   const navigate = useNavigate();
@@ -22,6 +23,73 @@ export default function MurajaahPlayer() {
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [completedSessions, setCompletedSessions] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [currentEntry, setCurrentEntry] = useState(null);
+  const [verifiedMemorizations, setVerifiedMemorizations] = useState([]);
+
+  // Initialize state from localStorage on mount
+  useEffect(() => {
+    const storedEntry = localStorage.getItem('currentEntry');
+    const storedSession = localStorage.getItem('activeSession');
+    const storedCompletedSessions = localStorage.getItem('completedSessions');
+
+    if (storedEntry) {
+      setCurrentEntry(JSON.parse(storedEntry));
+    }
+    if (storedSession) {
+      setActiveSession(JSON.parse(storedSession));
+    }
+    if (storedCompletedSessions) {
+      setCompletedSessions(parseInt(storedCompletedSessions, 10));
+    }
+  }, []);
+
+  // Update localStorage whenever currentEntry, activeSession, or completedSessions changes
+  useEffect(() => {
+    if (currentEntry) {
+      localStorage.setItem('currentEntry', JSON.stringify(currentEntry));
+    }
+  }, [currentEntry]);
+
+  useEffect(() => {
+    if (activeSession) {
+      localStorage.setItem('activeSession', JSON.stringify(activeSession));
+    }
+  }, [activeSession]);
+
+  useEffect(() => {
+    localStorage.setItem('completedSessions', completedSessions);
+  }, [completedSessions]);
+
+  // Handle storage changes from other tabs
+  const handleStorageChange = (e) => {
+    if (e.key === 'activeSession') {
+      if (e.newValue) {
+        setActiveSession(JSON.parse(e.newValue));
+      } else {
+        setActiveSession(null);
+      }
+    } else if (e.key === 'currentEntry') {
+      if (e.newValue) {
+        setCurrentEntry(JSON.parse(e.newValue));
+      } else {
+        setCurrentEntry(null);
+      }
+    } else if (e.key === 'completedSessions') {
+      if (e.newValue) {
+        setCompletedSessions(parseInt(e.newValue, 10));
+      } else {
+        setCompletedSessions(0);
+      }
+    }
+  };
+
+  // Set up the storage event listener
+  useEffect(() => {
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   // Sync UI with URL type parameter
   useEffect(() => {
@@ -29,7 +97,6 @@ export default function MurajaahPlayer() {
       setType(type);
     }
   }, [type]);
-  console.log(type);
 
   // Handle toggle change
   const handleTypeChange = (checked) => {
@@ -108,8 +175,11 @@ export default function MurajaahPlayer() {
           "Content-Type": "application/json",
         },
       });
-
       const data = await response.json();
+      if (!data || !data.session) {
+        return;
+      }
+
       if (response.ok && data.session.completed) {
         // Fetch latest completed sessions after completion
         const sessionsResponse = await apiCall("/revisions/sessions", {
@@ -273,6 +343,22 @@ export default function MurajaahPlayer() {
       }
     }
   }, [startVerse, startSurah, endSurah]);
+
+  // add storage event listener for cross-tab synchronization
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'activeSession') {
+        if (e.newValue) {
+          setActiveSession(JSON.parse(e.newValue));
+        } else {
+          setActiveSession(null);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   return (
     <Card className="max-w-2xl mx-auto">
