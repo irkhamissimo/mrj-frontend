@@ -77,7 +77,7 @@ function SessionIndicators({
       </div>
       {/* Small session indicators */}
       <div className="flex gap-1">
-        {[...Array(4)].map((_, idx) => (
+        {[...Array(5)].map((_, idx) => (
           <Circle
             key={idx}
             className={cn(
