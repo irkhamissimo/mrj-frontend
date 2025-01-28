@@ -231,8 +231,30 @@ export default function MurajaahPage() {
     };
   }, [activeSession]);
 
-  const handleStartMurajaah = (type, identifier) => {
-    navigate(`/murajaah/${type}/${identifier}`);
+  const handleStartMurajaah = async (type, identifier) => {
+    try {
+      // Start a new revision session
+      const response = await apiCall("/revisions/start", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: type,
+          identifier: identifier,
+          duration: 25 // 25 seconds duration
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setActiveSession(data.session);
+        setElapsedTime(0);
+        setIsPaused(false);
+      }
+    } catch (error) {
+      console.error("Failed to start revision:", error);
+    }
   };
 
   const handleAddMemorizedSurah = async (surahNumber, fromVerse, toVerse) => {
