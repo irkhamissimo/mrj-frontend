@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { apiCall } from "@/lib/api";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const formatDate = () => {
   const options = { 
@@ -411,163 +411,155 @@ export default function MemorizationPage() {
   }, []);
 
   return (
-    <Card className="max-w-2xl mx-auto">
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <CardTitle className="text-2xl font-bold">Ziyadah</CardTitle>
-          <span className="text-sm text-muted-foreground">{formatDate()}</span>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Timer and Session Indicators */}
-        <div className="flex items-center justify-center gap-8 mb-8">
-          {/* Main Timer Circle */}
-          <div className="relative w-32 h-32">
-            <svg className="w-full h-full transform -rotate-90">
+    <div className="space-y-4">
+      {/* Timer and Session Indicators */}
+      <div className="flex items-center justify-center gap-8 mb-8">
+        {/* Main Timer Circle */}
+        <div className="relative w-32 h-32">
+          <svg className="w-full h-full transform -rotate-90">
+            <circle
+              cx="64"
+              cy="64"
+              r="60"
+              className="stroke-muted fill-none"
+              strokeWidth="8"
+            />
+            {activeSession && (
               <circle
                 cx="64"
                 cy="64"
                 r="60"
-                className="stroke-muted fill-none"
+                className="stroke-primary fill-none"
                 strokeWidth="8"
+                strokeDasharray={`${(timeElapsed / 25) * 377} 377`}
               />
-              {activeSession && (
-                <circle
-                  cx="64"
-                  cy="64"
-                  r="60"
-                  className="stroke-primary fill-none"
-                  strokeWidth="8"
-                  strokeDasharray={`${(timeElapsed / 25) * 377} 377`}
-                />
-              )}
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center text-2xl font-bold">
-              {activeSession ? formatTime(timeElapsed) : "25:00"}
-            </div>
-          </div>
-
-          {/* Session Indicators */}
-          <div className="flex gap-3">
-            {[...Array(4)].map((_, index) => (
-              <div
-                key={index}
-                className={`w-4 h-4 rounded-full border-2 border-primary ${
-                  todayMemorization?.totalSessionsCompleted > index
-                    ? "bg-green-400"
-                    : "bg-background"
-                }`}
-              />
-            ))}
+            )}
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center text-2xl font-bold">
+            {activeSession ? formatTime(timeElapsed) : "25:00"}
           </div>
         </div>
 
-        {/* Surah and Verse Selection */}
-        <div className="space-y-6">
-          {/* Starting Point */}
-          <div className="space-y-2">
-            <Label>Start From</Label>
-            <div className="flex gap-4">
-              <Select 
-                onValueChange={setStartSurah} 
-                value={startSurah}
-                disabled={activeSession !== null || todayMemorization?.status === "completed"}
-              >
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Select Surah" />
-                </SelectTrigger>
-                <SelectContent>
-                  {surahs.map((surah) => (
-                    <SelectItem key={surah.number} value={surah.number.toString()}>
-                      {surah.englishName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        {/* Session Indicators */}
+        <div className="flex gap-3">
+          {[...Array(4)].map((_, index) => (
+            <div
+              key={index}
+              className={`w-4 h-4 rounded-full border-2 border-primary ${
+                todayMemorization?.totalSessionsCompleted > index
+                  ? "bg-green-400"
+                  : "bg-background"
+              }`}
+            />
+          ))}
+        </div>
+      </div>
 
-              <Select 
-                onValueChange={setStartVerse}
-                value={startVerse}
-                disabled={activeSession !== null || todayMemorization?.status === "completed"}
-              >
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Select Ayah" />
-                </SelectTrigger>
-                <SelectContent>
-                  {[...Array(surahs.find(s => s.number === parseInt(startSurah))?.numberOfAyahs || 0)].map((_, i) => (
-                    <SelectItem key={i + 1} value={(i + 1).toString()}>
-                      Ayah {i + 1}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Ending Point */}
-          <div className="space-y-2">
-            <Label>End At</Label>
-            <div className="flex gap-4">
-              <Select 
-                onValueChange={setEndSurah}
-                value={endSurah}
-                disabled={activeSession !== null || todayMemorization?.status === "completed"}
-              >
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Select Surah" />
-                </SelectTrigger>
-                <SelectContent>
-                  {surahs.map((surah) => (
-                    <SelectItem key={surah.number} value={surah.number.toString()}>
-                      {surah.englishName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select 
-                onValueChange={setEndVerse}
-                value={endVerse}
-                disabled={activeSession !== null || todayMemorization?.status === "completed"}
-              >
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Select Ayah" />
-                </SelectTrigger>
-                <SelectContent>
-                  {[...Array(surahs.find(s => s.number === parseInt(endSurah))?.numberOfAyahs || 0)].map((_, i) => (
-                    <SelectItem key={i + 1} value={(i + 1).toString()}>
-                      Ayah {i + 1}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
+      {/* Rest of the existing content without the outer Card and Tabs */}
+      <div className="space-y-6">
+        {/* Starting Point */}
+        <div className="space-y-2">
+          <Label>Start From</Label>
           <div className="flex gap-4">
-            <Button
-              className="flex-1"
-              onClick={activeSession ? handleTogglePause : handleStartMemorization}
-              disabled={
-                (!startSurah || !startVerse || !endSurah || !endVerse) && !activeSession ||
-                todayMemorization?.status === "completed"
-              }
+            <Select 
+              onValueChange={setStartSurah} 
+              value={startSurah}
+              disabled={activeSession !== null || todayMemorization?.status === "completed"}
             >
-              {activeSession 
-                ? (isPaused ? "Lanjutkan" : "Jeda") 
-                : "Mulai"}
-            </Button>
-            
-            <Button
-              className="flex-1"
-              onClick={handleFinishMemorization}
-              variant="secondary"
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Select Surah" />
+              </SelectTrigger>
+              <SelectContent>
+                {surahs.map((surah) => (
+                  <SelectItem key={surah.number} value={surah.number.toString()}>
+                    {surah.englishName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select 
+              onValueChange={setStartVerse}
+              value={startVerse}
+              disabled={activeSession !== null || todayMemorization?.status === "completed"}
             >
-              Selesai
-            </Button>
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Select Ayah" />
+              </SelectTrigger>
+              <SelectContent>
+                {[...Array(surahs.find(s => s.number === parseInt(startSurah))?.numberOfAyahs || 0)].map((_, i) => (
+                  <SelectItem key={i + 1} value={(i + 1).toString()}>
+                    Ayah {i + 1}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
-      </CardContent>
-    </Card>
+
+        {/* Ending Point */}
+        <div className="space-y-2">
+          <Label>End At</Label>
+          <div className="flex gap-4">
+            <Select 
+              onValueChange={setEndSurah}
+              value={endSurah}
+              disabled={activeSession !== null || todayMemorization?.status === "completed"}
+            >
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Select Surah" />
+              </SelectTrigger>
+              <SelectContent>
+                {surahs.map((surah) => (
+                  <SelectItem key={surah.number} value={surah.number.toString()}>
+                    {surah.englishName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select 
+              onValueChange={setEndVerse}
+              value={endVerse}
+              disabled={activeSession !== null || todayMemorization?.status === "completed"}
+            >
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Select Ayah" />
+              </SelectTrigger>
+              <SelectContent>
+                {[...Array(surahs.find(s => s.number === parseInt(endSurah))?.numberOfAyahs || 0)].map((_, i) => (
+                  <SelectItem key={i + 1} value={(i + 1).toString()}>
+                    Ayah {i + 1}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="flex gap-4">
+          <Button
+            className="flex-1"
+            onClick={activeSession ? handleTogglePause : handleStartMemorization}
+            disabled={
+              (!startSurah || !startVerse || !endSurah || !endVerse) && !activeSession ||
+              todayMemorization?.status === "completed"
+            }
+          >
+            {activeSession 
+              ? (isPaused ? "Lanjutkan" : "Jeda") 
+              : "Mulai"}
+          </Button>
+          
+          <Button
+            className="flex-1"
+            onClick={handleFinishMemorization}
+            variant="secondary"
+          >
+            Selesai
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }

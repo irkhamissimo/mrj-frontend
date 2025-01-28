@@ -1,6 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./pages/auth/LoginPage";
-import MemorizationPage from "./pages/memorization/MemorizationPage";
 import RevisionPage from "./pages/revision/RevisionPage";
 import RevisionsListPage from "./pages/revision/RevisionsListPage";
 import PrivateRoute from "./components/PrivateRoute";
@@ -8,7 +7,7 @@ import Layout from "./components/Layout";
 import VaultPage from "./pages/vault/VaultPage";
 import MurajaahPage from "./pages/murajaah/MurajaahPage";
 import MurajaahPlayer from "./pages/murajaah/MurajaahPlayer";
-
+import ZiyadahPage from "./pages/ziyadah/ZiyadahPage";
 function App() {
   return (
     <Router>
@@ -18,16 +17,16 @@ function App() {
           path="/" 
           element={
             <PrivateRoute>
-              <Navigate to="/memorization" />
+              <Navigate to="/ziyadah" />
             </PrivateRoute>
           } 
         />
         <Route 
-          path="/memorization" 
+          path="/ziyadah" 
           element={
             <PrivateRoute>
               <Layout>
-                <MemorizationPage />
+                <ZiyadahPage/>
               </Layout>
             </PrivateRoute>
           } 
