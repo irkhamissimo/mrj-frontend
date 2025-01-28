@@ -4,8 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Plus,
-  ChevronUp,
-  ChevronDown,
   Play,
   Circle,
   Pause,
@@ -104,6 +102,7 @@ export default function MurajaahPage() {
   const [loading, setLoading] = useState(false);
   const [completedSessions, setCompletedSessions] = useState(0);
   const [activeSession, setActiveSession] = useState(null);
+  const [verifiedMemorizations, setVerifiedMemorizations] = useState([]);
   const [isPaused, setIsPaused] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [surahs, setSurahs] = useState([]);
@@ -191,7 +190,6 @@ export default function MurajaahPage() {
         const data = await response.json();
         // Check if the response is valid and contains a session
         if (!data || !data.session) {
-          // console.error("Session data is not available:", data);
           return; // Exit if session data is not available
         }
 
@@ -210,7 +208,8 @@ export default function MurajaahPage() {
           const now = new Date();
           const elapsed = Math.floor((now - startTime) / 1000);
           const pauseDuration = data.session.totalPauseDuration || 0;
-          setElapsedTime(Math.min(25, elapsed - pauseDuration));
+          const adjustedElapsed = Math.floor(Math.max(0, elapsed - pauseDuration));
+          setElapsedTime(Math.min(25, adjustedElapsed));
           setIsPaused(data.session.isPaused);
         }
       } catch (error) {
@@ -218,7 +217,8 @@ export default function MurajaahPage() {
       }
     };
 
-    if (activeSession) {
+    // Only start checking status if there's an active session and it's not paused
+    if (activeSession && !isPaused) {
       // Check immediately and then set interval
       checkSessionStatus();
       intervalId = setInterval(checkSessionStatus, 1000);
@@ -229,7 +229,7 @@ export default function MurajaahPage() {
         clearInterval(intervalId);
       }
     };
-  }, [activeSession]);
+  }, [activeSession, isPaused]); // Add isPaused to dependencies
 
   const handleStartMurajaah = async (type, identifier) => {
     try {
@@ -249,6 +249,7 @@ export default function MurajaahPage() {
       if (response.ok) {
         const data = await response.json();
         setActiveSession(data.session);
+        setVerifiedMemorizations(data.verifiedMemorizations);
         setElapsedTime(0);
         setIsPaused(false);
       }
@@ -417,11 +418,24 @@ export default function MurajaahPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() =>
-                      handleStartMurajaah("surah", surah.surahNumber)
-                    }
+                    onClick={async () => {
+                      const isActive = verifiedMemorizations.some(mem => mem.surahNumber === surah.surahNumber);
+                      if (activeSession && isActive) {
+                        // Call pauseRevision endpoint
+                        const response = await apiCall(`/revisions/${activeSession._id}/pause`, {
+                          method: 'PUT',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                        });
+                        const data = await response.json();
+                        setIsPaused(data.session.isPaused);
+                      } else {
+                        handleStartMurajaah("surah", surah.surahNumber);
+                      }
+                    }}
                   >
-                    {activeSession?.surahNumber === surah.surahNumber ? (
+                    {activeSession && verifiedMemorizations.some(mem => mem.surahNumber === surah.surahNumber) ? (
                       isPaused ? (
                         <Play className="h-4 w-4" />
                       ) : (
@@ -516,9 +530,24 @@ export default function MurajaahPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleStartMurajaah("juz", juz.juzNumber)}
+                    onClick={async () => {
+                      const isActive = verifiedMemorizations.some(mem => mem.juzNumber === juz.juzNumber);
+                      if (activeSession && isActive) {
+                        // Call pauseRevision endpoint
+                        const response = await apiCall(`/revisions/${activeSession._id}/pause`, {
+                          method: 'PUT',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                        });
+                        const data = await response.json();
+                        setIsPaused(data.session.isPaused);
+                      } else {
+                        handleStartMurajaah("juz", juz.juzNumber);
+                      }
+                    }}
                   >
-                    {activeSession?.juzNumber === juz.juzNumber ? (
+                    {activeSession && verifiedMemorizations.some(mem => mem.juzNumber === juz.juzNumber) ? (
                       isPaused ? (
                         <Play className="h-4 w-4" />
                       ) : (
