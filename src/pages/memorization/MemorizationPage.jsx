@@ -129,7 +129,18 @@ export default function MemorizationPage() {
             
             const memData = await memResponse.json();
             if (memResponse.ok && memData.length > 0) {
-              setTodayMemorization(memData[0]);
+              const todayMem = memData[0];
+              setTodayMemorization(todayMem);
+              // Update completed sessions count
+              setCompletedSessions(todayMem.totalSessionsCompleted || 0);
+              
+              // Update form values if needed
+              if (!startSurah || !startVerse || !endVerse) {
+                setStartSurah(todayMem.surahNumber.toString());
+                setStartVerse(todayMem.fromVerse.toString());
+                setEndSurah(todayMem.surahNumber.toString());
+                setEndVerse(todayMem.toVerse.toString());
+              }
             }
           } else {
             setIsPaused(data.session.isPaused || false);
@@ -148,6 +159,21 @@ export default function MemorizationPage() {
               if (entryResponse.ok) {
                 setCurrentEntry(entryData);
                 localStorage.setItem('currentEntry', JSON.stringify(entryData));
+                
+                // Also update todayMemorization to get the latest session count
+                const memResponse = await apiCall("/memorizations/completedMemorizations", {
+                  method: "GET",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                });
+                
+                const memData = await memResponse.json();
+                if (memResponse.ok && memData.length > 0) {
+                  const todayMem = memData[0];
+                  setTodayMemorization(todayMem);
+                  setCompletedSessions(todayMem.totalSessionsCompleted || 0);
+                }
               }
             }
           }
@@ -301,9 +327,60 @@ export default function MemorizationPage() {
     try {
       let response;
       
-      // Check if current entry exists and is not completed
-      if (!currentEntry || currentEntry.status === "completed") {
-        // First time or previous entry was completed - start new memorization
+      // First check if we have today's memorization
+      const memResponse = await apiCall("/memorizations/completedMemorizations", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      
+      const memData = await memResponse.json();
+      console.log(memData);
+      const todayMem = memResponse.ok && memData.length > 0 ? memData[0] : null;
+      
+      // If we have today's memorization and it matches current selection
+      if (todayMem && 
+          todayMem.surahNumber === startSurahNum && 
+          todayMem.fromVerse === startVerseNum && 
+          todayMem.toVerse === endVerseNum) {
+        // Start new session with existing entry
+        response = await apiCall(`/memorizations/${todayMem._id}/sessions`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            memorizationId: todayMem._id
+          }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          // Handle specific error cases
+          if (data.error === "Previous session is still in progress") {
+            alert("Previous session is still in progress. Please wait for it to complete.");
+            return;
+          }
+          if (data.error === "Maximum 4 sessions allowed per entry") {
+            alert("You have completed all sessions for today.");
+            return;
+          }
+          throw new Error(data.error || 'Failed to start session');
+        }
+
+        // Update both session and entry data
+        setActiveSession(data);
+        setTimeElapsed(0);
+        setCurrentEntry(todayMem);
+        setTodayMemorization(todayMem);
+        
+        // Store in localStorage
+        localStorage.setItem('activeSession', JSON.stringify(data));
+        localStorage.setItem('currentEntry', JSON.stringify(todayMem));
+        localStorage.setItem('sessionStartTime', new Date(data.startTime).getTime());
+      } else {
+        // Start new memorization entry
         response = await apiCall("/memorizations/start", {
           method: "POST",
           headers: {
@@ -329,35 +406,6 @@ export default function MemorizationPage() {
         localStorage.setItem('currentEntry', JSON.stringify(data.entry));
         localStorage.setItem('activeSession', JSON.stringify(data.session));
         localStorage.setItem('sessionStartTime', new Date(data.session.startTime).getTime());
-      } else {
-        // Current entry exists and is not completed - start new session
-        response = await apiCall(`/memorizations/${currentEntry._id}/sessions`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        const data = await response.json();
-        if (!response.ok) {
-          // Handle specific error cases
-          if (data.error === "Previous session is still in progress") {
-            alert("Previous session is still in progress. Please wait for it to complete.");
-            return;
-          }
-          if (data.error === "Maximum 4 sessions allowed per entry") {
-            alert("You have completed all sessions for today.");
-            return;
-          }
-          throw new Error(data.error || 'Failed to start session');
-        }
-
-        setActiveSession(data);
-        setTimeElapsed(0);
-        
-        // Store in localStorage
-        localStorage.setItem('activeSession', JSON.stringify(data));
-        localStorage.setItem('sessionStartTime', new Date(data.startTime).getTime());
       }
     } catch (error) {
       console.error("Failed to start memorization:", error);
