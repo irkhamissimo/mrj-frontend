@@ -109,11 +109,15 @@ export default function MemorizationPage() {
         });
         const data = await response.json();
 
-        if (response.ok) {
+        if (response.ok && data.session) {
           if (data.session.completed) {
+            // Clear both session and entry data
             setActiveSession(null);
+            setCurrentEntry(null);
             setTimeElapsed(25);
             localStorage.removeItem('sessionStartTime');
+            localStorage.removeItem('activeSession');
+            localStorage.removeItem('currentEntry');
             
             // Fetch updated today's memorization data
             const memResponse = await apiCall("/memorizations/completedMemorizations", {
@@ -131,10 +135,40 @@ export default function MemorizationPage() {
             setIsPaused(data.session.isPaused || false);
             // Update activeSession with latest data
             setActiveSession(data.session);
+            
+            // Fetch and update current entry data if not present
+            if (!currentEntry) {
+              const entryResponse = await apiCall(`/memorizations/${data.session.memorizationId}`, {
+                method: "GET",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+              });
+              const entryData = await entryResponse.json();
+              if (entryResponse.ok) {
+                setCurrentEntry(entryData);
+                localStorage.setItem('currentEntry', JSON.stringify(entryData));
+              }
+            }
           }
+        } else {
+          // Handle case where session data is not available
+          setActiveSession(null);
+          setCurrentEntry(null);
+          setTimeElapsed(0);
+          localStorage.removeItem('sessionStartTime');
+          localStorage.removeItem('activeSession');
+          localStorage.removeItem('currentEntry');
         }
       } catch (error) {
         console.error("Failed to check session status:", error);
+        // Clean up both session and entry data on error
+        setActiveSession(null);
+        setCurrentEntry(null);
+        setTimeElapsed(0);
+        localStorage.removeItem('sessionStartTime');
+        localStorage.removeItem('activeSession');
+        localStorage.removeItem('currentEntry');
       }
     };
 
