@@ -35,7 +35,7 @@ export default function LoginPage() {
       if (response.ok) {
         localStorage.setItem("accessToken", data.accessToken);
         localStorage.setItem("refreshToken", data.refreshToken);
-        navigate("/memorization");
+        navigate("/ziyadah");
       } else {
         setError(data.message || "Login failed. Please check your credentials.");
       }
