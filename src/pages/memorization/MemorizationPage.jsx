@@ -336,7 +336,6 @@ export default function MemorizationPage() {
       });
       
       const memData = await memResponse.json();
-      console.log(memData);
       const todayMem = memResponse.ok && memData.length > 0 ? memData[0] : null;
       
       // If we have today's memorization and it matches current selection
@@ -369,15 +368,13 @@ export default function MemorizationPage() {
           throw new Error(data.error || 'Failed to start session');
         }
 
-        // Update both session and entry data
+        // Update session data and todayMemorization
         setActiveSession(data);
         setTimeElapsed(0);
-        setCurrentEntry(todayMem);
         setTodayMemorization(todayMem);
         
-        // Store in localStorage
+        // Store only session data in localStorage
         localStorage.setItem('activeSession', JSON.stringify(data));
-        localStorage.setItem('currentEntry', JSON.stringify(todayMem));
         localStorage.setItem('sessionStartTime', new Date(data.startTime).getTime());
       } else {
         // Start new memorization entry
@@ -398,12 +395,12 @@ export default function MemorizationPage() {
           throw new Error(data.error || 'Failed to start memorization');
         }
 
-        setCurrentEntry(data.entry);
+        // Set todayMemorization directly from the response
+        setTodayMemorization(data.entry);
         setActiveSession(data.session);
         setTimeElapsed(0);
         
-        // Store in localStorage
-        localStorage.setItem('currentEntry', JSON.stringify(data.entry));
+        // Store only session data in localStorage
         localStorage.setItem('activeSession', JSON.stringify(data.session));
         localStorage.setItem('sessionStartTime', new Date(data.session.startTime).getTime());
       }
@@ -445,9 +442,13 @@ export default function MemorizationPage() {
   };
 
   const handleFinishMemorization = async () => {
-    if (!currentEntry) return;
+    if (!todayMemorization || !todayMemorization._id) {
+      console.error("No active memorization entry found");
+      return;
+    }
+
     try {
-      const response = await apiCall(`/memorizations/${currentEntry.id}/finish`, {
+      const response = await apiCall(`/memorizations/${todayMemorization._id}/finish`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -469,15 +470,25 @@ export default function MemorizationPage() {
         
         const memData = await memResponse.json();
         if (memResponse.ok && memData.length > 0) {
-          setTodayMemorization(memData[0]);
-          setCompletedSessions(memData[0].totalSessionsCompleted || 0);
+          const todayMem = memData[0];
+          setTodayMemorization(todayMem);
+          setCompletedSessions(todayMem.totalSessionsCompleted || 0);
         }
 
+        // Clear states
+        setActiveSession(null);
+        setTimeElapsed(0);
+        
+        // Clear localStorage
+        localStorage.removeItem('activeSession');
+        localStorage.removeItem('sessionStartTime');
+
         // Navigate to revision page with the entry ID
-        navigate(`/revision/${currentEntry._id}`);
+        navigate(`/revision/${todayMemorization._id}`);
       }
     } catch (error) {
       console.error("Failed to finish memorization:", error);
+      alert("Failed to finish memorization. Please try again.");
     }
   };
 
