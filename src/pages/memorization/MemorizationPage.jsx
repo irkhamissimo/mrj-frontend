@@ -4,7 +4,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { apiCall } from "@/lib/api";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const formatDate = () => {
   const options = { 
@@ -177,6 +176,20 @@ export default function MemorizationPage() {
           const session = JSON.parse(storedSession);
           const entry = JSON.parse(storedEntry);
           
+          // Compare dates
+          const today = new Date().toLocaleDateString();
+          const entryDate = new Date(entry.dateStarted).toLocaleDateString();
+          
+          if (today !== entryDate) {
+            // Clear storage if entry is not from today
+            localStorage.removeItem('activeSession');
+            localStorage.removeItem('currentEntry');
+            localStorage.removeItem('sessionStartTime');
+            setActiveSession(null);
+            setCurrentEntry(null);
+            return;
+          }
+          
           // Verify if session is still active via API
           const response = await apiCall(`/memorizations/sessions/${session._id}/status`, {
             method: "GET",
@@ -198,8 +211,6 @@ export default function MemorizationPage() {
             setEndVerse(entry.toVerse.toString());
           } else {
             // Clear storage if session is completed or invalid
-            // localStorage.removeItem('activeSession');
-            // localStorage.removeItem('currentEntry');
             localStorage.removeItem('sessionStartTime');
           }
         }
