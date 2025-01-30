@@ -22,11 +22,9 @@ export default function MemorizationPage() {
   const [startVerse, setStartVerse] = useState("");
   const [endSurah, setEndSurah] = useState(null);
   const [endVerse, setEndVerse] = useState("");
-  const [activeSession, setActiveSession] = useState(null);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [completedSessions, setCompletedSessions] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [currentEntry, setCurrentEntry] = useState(null);
   const [todayMemorization, setTodayMemorization] = useState(null);
 
   // Fetch surahs on component mount
@@ -79,18 +77,18 @@ export default function MemorizationPage() {
     let statusInterval;
     
     const updateTimer = () => {
-      if (!activeSession || isPaused) return;
+      if (!todayMemorization?.currentSession || isPaused) return;
 
       // Get session start time from localStorage or set it
       let sessionStartTime = localStorage.getItem('sessionStartTime');
-      if (!sessionStartTime && activeSession) {
-        sessionStartTime = new Date(activeSession.startTime).getTime();
+      if (!sessionStartTime && todayMemorization.currentSession) {
+        sessionStartTime = new Date(todayMemorization.currentSession.startTime).getTime();
         localStorage.setItem('sessionStartTime', sessionStartTime);
       }
 
       if (sessionStartTime) {
         const now = Date.now();
-        const pauseDuration = (activeSession.totalPauseDuration || 0) * 60 * 1000; // Convert minutes to milliseconds
+        const pauseDuration = (todayMemorization.currentSession.totalPauseDuration || 0) * 60 * 1000;
         const elapsedMs = now - parseInt(sessionStartTime) - pauseDuration;
         const elapsedSeconds = Math.floor(elapsedMs / 1000);
         setTimeElapsed(Math.min(25, Math.max(0, elapsedSeconds)));
@@ -98,10 +96,10 @@ export default function MemorizationPage() {
     };
 
     const checkSessionStatus = async () => {
-      if (!activeSession) return;
+      if (!todayMemorization?.currentSession) return;
 
       try {
-        const response = await apiCall(`/memorizations/sessions/${activeSession._id}/status`, {
+        const response = await apiCall(`/memorizations/sessions/${todayMemorization.currentSession._id}/status`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -111,13 +109,9 @@ export default function MemorizationPage() {
 
         if (response.ok && data.session) {
           if (data.session.completed) {
-            // Clear both session and entry data
-            setActiveSession(null);
-            setCurrentEntry(null);
+            // Clear session data
             setTimeElapsed(25);
             localStorage.removeItem('sessionStartTime');
-            localStorage.removeItem('activeSession');
-            localStorage.removeItem('currentEntry');
             
             // Fetch updated today's memorization data
             const memResponse = await apiCall("/memorizations/completedMemorizations", {
@@ -131,7 +125,6 @@ export default function MemorizationPage() {
             if (memResponse.ok && memData.length > 0) {
               const todayMem = memData[0];
               setTodayMemorization(todayMem);
-              // Update completed sessions count
               setCompletedSessions(todayMem.totalSessionsCompleted || 0);
               
               // Update form values if needed
@@ -144,78 +137,36 @@ export default function MemorizationPage() {
             }
           } else {
             setIsPaused(data.session.isPaused || false);
-            // Update activeSession with latest data
-            setActiveSession(data.session);
-            
-            // Fetch and update current entry data if not present
-            if (!currentEntry) {
-              const entryResponse = await apiCall(`/memorizations/${data.session.memorizationId}`, {
-                method: "GET",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-              });
-              const entryData = await entryResponse.json();
-              if (entryResponse.ok) {
-                setCurrentEntry(entryData);
-                localStorage.setItem('currentEntry', JSON.stringify(entryData));
-                
-                // Also update todayMemorization to get the latest session count
-                const memResponse = await apiCall("/memorizations/completedMemorizations", {
-                  method: "GET",
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                });
-                
-                const memData = await memResponse.json();
-                if (memResponse.ok && memData.length > 0) {
-                  const todayMem = memData[0];
-                  setTodayMemorization(todayMem);
-                  setCompletedSessions(todayMem.totalSessionsCompleted || 0);
-                }
-              }
-            }
+            // Update todayMemorization with latest session data
+            setTodayMemorization(prev => ({
+              ...prev,
+              currentSession: data.session
+            }));
           }
-        } else {
-          // Handle case where session data is not available
-          setActiveSession(null);
-          setCurrentEntry(null);
-          setTimeElapsed(0);
-          localStorage.removeItem('sessionStartTime');
-          localStorage.removeItem('activeSession');
-          localStorage.removeItem('currentEntry');
         }
       } catch (error) {
         console.error("Failed to check session status:", error);
-        // Clean up both session and entry data on error
-        setActiveSession(null);
-        setCurrentEntry(null);
+        // Clean up session data on error
         setTimeElapsed(0);
         localStorage.removeItem('sessionStartTime');
-        localStorage.removeItem('activeSession');
-        localStorage.removeItem('currentEntry');
       }
     };
 
-    if (activeSession) {
+    if (todayMemorization?.currentSession && !isPaused) {
       // Initial update
       updateTimer();
       checkSessionStatus();
 
       // Set up intervals
-      timerInterval = setInterval(updateTimer, 100); // More frequent updates for smoother timer
-      statusInterval = setInterval(checkSessionStatus, 1000); // Check status every second
+      timerInterval = setInterval(updateTimer, 100);
+      statusInterval = setInterval(checkSessionStatus, 1000);
 
       return () => {
         clearInterval(timerInterval);
         clearInterval(statusInterval);
       };
-    } else {
-      // Clean up when session ends
-      localStorage.removeItem('sessionStartTime');
     }
-  }, [activeSession, isPaused]);
+  }, [todayMemorization?.currentSession, isPaused]);
 
   // Clean up localStorage on component unmount
   useEffect(() => {
@@ -228,30 +179,12 @@ export default function MemorizationPage() {
   useEffect(() => {
     const initializeFromStorage = async () => {
       try {
-        // Get active session from localStorage
-        const storedSession = localStorage.getItem('activeSession');
-        const storedEntry = localStorage.getItem('currentEntry');
+        // Get session start time from localStorage
+        const storedSessionStartTime = localStorage.getItem('sessionStartTime');
         
-        if (storedSession && storedEntry) {
-          const session = JSON.parse(storedSession);
-          const entry = JSON.parse(storedEntry);
-          
-          // Compare dates
-          const today = new Date().toLocaleDateString();
-          const entryDate = new Date(entry.dateStarted).toLocaleDateString();
-          
-          if (today !== entryDate) {
-            // Clear storage if entry is not from today
-            localStorage.removeItem('activeSession');
-            localStorage.removeItem('currentEntry');
-            localStorage.removeItem('sessionStartTime');
-            setActiveSession(null);
-            setCurrentEntry(null);
-            return;
-          }
-          
+        if (storedSessionStartTime && todayMemorization?.currentSession?._id) {
           // Verify if session is still active via API
-          const response = await apiCall(`/memorizations/sessions/${session._id}/status`, {
+          const response = await apiCall(`/memorizations/sessions/${todayMemorization.currentSession._id}/status`, {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
@@ -260,15 +193,19 @@ export default function MemorizationPage() {
           const data = await response.json();
           
           if (response.ok && !data.session.completed) {
-            setActiveSession(session);
-            setCurrentEntry(entry);
+            setTodayMemorization(prev => ({
+              ...prev,
+              currentSession: data.session
+            }));
             setIsPaused(data.session.isPaused || false);
             
             // Set other related states
-            setStartSurah(entry.surahNumber.toString());
-            setStartVerse(entry.fromVerse.toString());
-            setEndSurah(entry.surahNumber.toString());
-            setEndVerse(entry.toVerse.toString());
+            if (todayMemorization) {
+              setStartSurah(todayMemorization.surahNumber.toString());
+              setStartVerse(todayMemorization.fromVerse.toString());
+              setEndSurah(todayMemorization.surahNumber.toString());
+              setEndVerse(todayMemorization.toVerse.toString());
+            }
           } else {
             // Clear storage if session is completed or invalid
             localStorage.removeItem('sessionStartTime');
@@ -280,35 +217,21 @@ export default function MemorizationPage() {
     };
 
     initializeFromStorage();
-  }, []);
+  }, [todayMemorization?._id]);
 
-  // Remove localStorage handling for completedSessions since it comes from todayMemorization
+  // Update localStorage when todayMemorization changes
   useEffect(() => {
-    const storedEntry = localStorage.getItem('currentEntry');
-    const storedSession = localStorage.getItem('activeSession');
-
-    if (storedEntry) {
-      setCurrentEntry(JSON.parse(storedEntry));
+    if (todayMemorization?.currentSession?.startTime) {
+      localStorage.setItem('sessionStartTime', new Date(todayMemorization.currentSession.startTime).getTime());
     }
-    if (storedSession) {
-      setActiveSession(JSON.parse(storedSession));
-    }
-  }, []);
+  }, [todayMemorization?.currentSession?.startTime]);
 
-  // Remove completedSessions from localStorage updates
-  useEffect(() => {
-    if (currentEntry) {
-      localStorage.setItem('currentEntry', JSON.stringify(currentEntry));
-    }
-  }, [currentEntry]);
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
 
-  useEffect(() => {
-    if (activeSession) {
-      localStorage.setItem('activeSession', JSON.stringify(activeSession));
-    }
-  }, [activeSession]);
-
-  // Modify handleStartMemorization to store session data
   const handleStartMemorization = async () => {
     if (!startSurah || !startVerse || !endSurah || !endVerse) return;
 
@@ -327,30 +250,19 @@ export default function MemorizationPage() {
     try {
       let response;
       
-      // First check if we have today's memorization
-      const memResponse = await apiCall("/memorizations/completedMemorizations", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      
-      const memData = await memResponse.json();
-      const todayMem = memResponse.ok && memData.length > 0 ? memData[0] : null;
-      
       // If we have today's memorization and it matches current selection
-      if (todayMem && 
-          todayMem.surahNumber === startSurahNum && 
-          todayMem.fromVerse === startVerseNum && 
-          todayMem.toVerse === endVerseNum) {
+      if (todayMemorization && 
+          todayMemorization.surahNumber === startSurahNum && 
+          todayMemorization.fromVerse === startVerseNum && 
+          todayMemorization.toVerse === endVerseNum) {
         // Start new session with existing entry
-        response = await apiCall(`/memorizations/${todayMem._id}/sessions`, {
+        response = await apiCall(`/memorizations/${todayMemorization._id}/sessions`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            memorizationId: todayMem._id
+            memorizationId: todayMemorization._id
           }),
         });
 
@@ -368,13 +280,12 @@ export default function MemorizationPage() {
           throw new Error(data.error || 'Failed to start session');
         }
 
-        // Update session data and todayMemorization
-        setActiveSession(data);
+        // Update todayMemorization with new session
+        setTodayMemorization(prev => ({
+          ...prev,
+          currentSession: data
+        }));
         setTimeElapsed(0);
-        setTodayMemorization(todayMem);
-        
-        // Store only session data in localStorage
-        localStorage.setItem('activeSession', JSON.stringify(data));
         localStorage.setItem('sessionStartTime', new Date(data.startTime).getTime());
       } else {
         // Start new memorization entry
@@ -395,13 +306,12 @@ export default function MemorizationPage() {
           throw new Error(data.error || 'Failed to start memorization');
         }
 
-        // Set todayMemorization directly from the response
-        setTodayMemorization(data.entry);
-        setActiveSession(data.session);
+        // Set todayMemorization with entry and session data
+        setTodayMemorization({
+          ...data.entry,
+          currentSession: data.session
+        });
         setTimeElapsed(0);
-        
-        // Store only session data in localStorage
-        localStorage.setItem('activeSession', JSON.stringify(data.session));
         localStorage.setItem('sessionStartTime', new Date(data.session.startTime).getTime());
       }
     } catch (error) {
@@ -410,18 +320,11 @@ export default function MemorizationPage() {
     }
   };
 
-  const formatTime = (seconds) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
-
-  // Modify handleTogglePause to update localStorage
   const handleTogglePause = async () => {
-    if (!activeSession) return;
+    if (!todayMemorization?.currentSession) return;
 
     try {
-      const response = await apiCall(`/memorizations/sessions/${activeSession._id}/pause`, {
+      const response = await apiCall(`/memorizations/sessions/${todayMemorization.currentSession._id}/pause`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -431,10 +334,10 @@ export default function MemorizationPage() {
       if (response.ok) {
         const data = await response.json();
         setIsPaused(!isPaused);
-        setActiveSession(data.session);
-        
-        // Update localStorage
-        localStorage.setItem('activeSession', JSON.stringify(data.session));
+        setTodayMemorization(prev => ({
+          ...prev,
+          currentSession: data.session
+        }));
       }
     } catch (error) {
       console.error("Failed to toggle pause:", error);
@@ -476,11 +379,9 @@ export default function MemorizationPage() {
         }
 
         // Clear states
-        setActiveSession(null);
         setTimeElapsed(0);
         
         // Clear localStorage
-        localStorage.removeItem('activeSession');
         localStorage.removeItem('sessionStartTime');
 
         // Navigate to revision page with the entry ID
@@ -495,17 +396,11 @@ export default function MemorizationPage() {
   // Add storage event listener for cross-tab synchronization
   useEffect(() => {
     const handleStorageChange = (e) => {
-      if (e.key === 'activeSession') {
+      if (e.key === 'sessionStartTime') {
         if (e.newValue) {
-          setActiveSession(JSON.parse(e.newValue));
+          localStorage.setItem('sessionStartTime', e.newValue);
         } else {
-          setActiveSession(null);
-        }
-      } else if (e.key === 'currentEntry') {
-        if (e.newValue) {
-          setCurrentEntry(JSON.parse(e.newValue));
-        } else {
-          setCurrentEntry(null);
+          localStorage.removeItem('sessionStartTime');
         }
       }
     };
@@ -528,7 +423,7 @@ export default function MemorizationPage() {
               className="stroke-muted fill-none"
               strokeWidth="8"
             />
-            {activeSession && (
+            {todayMemorization?.currentSession && (
               <circle
                 cx="64"
                 cy="64"
@@ -540,7 +435,7 @@ export default function MemorizationPage() {
             )}
           </svg>
           <div className="absolute inset-0 flex items-center justify-center text-2xl font-bold">
-            {activeSession ? formatTime(timeElapsed) : "25:00"}
+            {todayMemorization?.currentSession ? formatTime(timeElapsed) : "25:00"}
           </div>
         </div>
 
@@ -568,7 +463,7 @@ export default function MemorizationPage() {
             <Select 
               onValueChange={setStartSurah} 
               value={startSurah}
-              disabled={activeSession !== null || todayMemorization?.status === "completed"}
+              disabled={todayMemorization?.currentSession || todayMemorization?.status === "completed"}
             >
               <SelectTrigger className="flex-1">
                 <SelectValue placeholder="Select Surah" />
@@ -585,7 +480,7 @@ export default function MemorizationPage() {
             <Select 
               onValueChange={setStartVerse}
               value={startVerse}
-              disabled={activeSession !== null || todayMemorization?.status === "completed"}
+              disabled={todayMemorization?.currentSession || todayMemorization?.status === "completed"}
             >
               <SelectTrigger className="flex-1">
                 <SelectValue placeholder="Select Ayah" />
@@ -608,7 +503,7 @@ export default function MemorizationPage() {
             <Select 
               onValueChange={setEndSurah}
               value={endSurah}
-              disabled={activeSession !== null || todayMemorization?.status === "completed"}
+              disabled={todayMemorization?.currentSession || todayMemorization?.status === "completed"}
             >
               <SelectTrigger className="flex-1">
                 <SelectValue placeholder="Select Surah" />
@@ -625,7 +520,7 @@ export default function MemorizationPage() {
             <Select 
               onValueChange={setEndVerse}
               value={endVerse}
-              disabled={activeSession !== null || todayMemorization?.status === "completed"}
+              disabled={todayMemorization?.currentSession || todayMemorization?.status === "completed"}
             >
               <SelectTrigger className="flex-1">
                 <SelectValue placeholder="Select Ayah" />
@@ -644,13 +539,13 @@ export default function MemorizationPage() {
         <div className="flex gap-4">
           <Button
             className="flex-1"
-            onClick={activeSession ? handleTogglePause : handleStartMemorization}
+            onClick={todayMemorization?.currentSession ? handleTogglePause : handleStartMemorization}
             disabled={
-              (!startSurah || !startVerse || !endSurah || !endVerse) && !activeSession ||
+              (!startSurah || !startVerse || !endSurah || !endVerse) && !todayMemorization?.currentSession ||
               todayMemorization?.status === "completed"
             }
           >
-            {activeSession 
+            {todayMemorization?.currentSession 
               ? (isPaused ? "Lanjutkan" : "Jeda") 
               : "Mulai"}
           </Button>
