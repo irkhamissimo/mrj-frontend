@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -26,6 +26,7 @@ export default function MemorizationPage() {
   const [completedSessions, setCompletedSessions] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [todayMemorization, setTodayMemorization] = useState(null);
+  const [lastStatusCheck, setLastStatusCheck] = useState(0);
 
   // Fetch surahs on component mount
   useEffect(() => {
@@ -71,6 +72,19 @@ export default function MemorizationPage() {
     fetchTodayMemorization();
   }, []);
 
+  // Memoize the timer calculation to reduce unnecessary updates
+  const calculateTimeElapsed = useCallback(() => {
+    if (!todayMemorization?.currentSession || isPaused) return 0;
+
+    const sessionStartTime = localStorage.getItem('sessionStartTime');
+    if (!sessionStartTime) return 0;
+
+    const now = Date.now();
+    const pauseDuration = (todayMemorization.currentSession.totalPauseDuration || 0) * 60 * 1000;
+    const elapsedMs = now - parseInt(sessionStartTime) - pauseDuration;
+    return Math.min(25, Math.max(0, Math.floor(elapsedMs / 1000)));
+  }, [todayMemorization?.currentSession, isPaused]);
+
   // Effect for checking session status and updating timer
   useEffect(() => {
     let timerInterval;
@@ -78,25 +92,19 @@ export default function MemorizationPage() {
     
     const updateTimer = () => {
       if (!todayMemorization?.currentSession || isPaused) return;
-
-      // Get session start time from localStorage or set it
-      let sessionStartTime = localStorage.getItem('sessionStartTime');
-      if (!sessionStartTime && todayMemorization.currentSession) {
-        sessionStartTime = new Date(todayMemorization.currentSession.startTime).getTime();
-        localStorage.setItem('sessionStartTime', sessionStartTime);
-      }
-
-      if (sessionStartTime) {
-        const now = Date.now();
-        const pauseDuration = (todayMemorization.currentSession.totalPauseDuration || 0) * 60 * 1000;
-        const elapsedMs = now - parseInt(sessionStartTime) - pauseDuration;
-        const elapsedSeconds = Math.floor(elapsedMs / 1000);
-        setTimeElapsed(Math.min(25, Math.max(0, elapsedSeconds)));
+      const newElapsed = calculateTimeElapsed();
+      if (newElapsed !== timeElapsed) {
+        setTimeElapsed(newElapsed);
       }
     };
 
     const checkSessionStatus = async () => {
       if (!todayMemorization?.currentSession) return;
+
+      // Only check status if enough time has passed (15 seconds)
+      const now = Date.now();
+      if (now - lastStatusCheck < 15000) return;
+      setLastStatusCheck(now);
 
       try {
         const response = await apiCall(`/memorizations/sessions/${todayMemorization.currentSession._id}/status`, {
@@ -114,20 +122,13 @@ export default function MemorizationPage() {
             localStorage.removeItem('sessionStartTime');
             
             // Fetch updated today's memorization data
-            const memResponse = await apiCall("/memorizations/completedMemorizations", {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-              },
-            });
-            
+            const memResponse = await apiCall("/memorizations/completedMemorizations");
             const memData = await memResponse.json();
             if (memResponse.ok && memData.length > 0) {
               const todayMem = memData[0];
               setTodayMemorization(todayMem);
               setCompletedSessions(todayMem.totalSessionsCompleted || 0);
               
-              // Update form values if needed
               if (!startSurah || !startVerse || !endVerse) {
                 setStartSurah(todayMem.surahNumber.toString());
                 setStartVerse(todayMem.fromVerse.toString());
@@ -137,7 +138,6 @@ export default function MemorizationPage() {
             }
           } else {
             setIsPaused(data.session.isPaused || false);
-            // Update todayMemorization with latest session data
             setTodayMemorization(prev => ({
               ...prev,
               currentSession: data.session
@@ -146,27 +146,28 @@ export default function MemorizationPage() {
         }
       } catch (error) {
         console.error("Failed to check session status:", error);
-        // Clean up session data on error
-        setTimeElapsed(0);
-        localStorage.removeItem('sessionStartTime');
       }
     };
 
     if (todayMemorization?.currentSession && !isPaused) {
       // Initial update
       updateTimer();
-      checkSessionStatus();
 
-      // Set up intervals
-      timerInterval = setInterval(updateTimer, 100);
-      statusInterval = setInterval(checkSessionStatus, 1000);
+      // Set up intervals with optimized frequencies
+      timerInterval = setInterval(updateTimer, 1000);
+      statusInterval = setInterval(checkSessionStatus, 15000); // Check status every 15 seconds
 
       return () => {
         clearInterval(timerInterval);
         clearInterval(statusInterval);
       };
     }
-  }, [todayMemorization?.currentSession, isPaused]);
+  }, [todayMemorization?.currentSession, isPaused, calculateTimeElapsed, lastStatusCheck]);
+
+  // Memoize the progress calculation
+  const timerProgress = useMemo(() => {
+    return (timeElapsed / 25) * 377;
+  }, [timeElapsed]);
 
   // Clean up localStorage on component unmount
   useEffect(() => {
@@ -430,7 +431,7 @@ export default function MemorizationPage() {
                 r="60"
                 className="stroke-primary fill-none"
                 strokeWidth="8"
-                strokeDasharray={`${(timeElapsed / 25) * 377} 377`}
+                strokeDasharray={`${timerProgress} 377`}
               />
             )}
           </svg>
