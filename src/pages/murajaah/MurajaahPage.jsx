@@ -159,22 +159,56 @@ export default function MurajaahPage() {
     const savedSession = localStorage.getItem("activeSession");
     const savedIsPaused = localStorage.getItem("isPaused");
     const savedElapsedTime = localStorage.getItem("elapsedTime");
+    const savedVerifiedMems = localStorage.getItem("verifiedMemorizations");
 
     if (savedSession) setActiveSession(JSON.parse(savedSession));
     if (savedIsPaused) setIsPaused(JSON.parse(savedIsPaused));
     if (savedElapsedTime) setElapsedTime(parseInt(savedElapsedTime));
+    if (savedVerifiedMems) setVerifiedMemorizations(JSON.parse(savedVerifiedMems));
   }, []);
 
   // Save session state to localStorage when it changes
   useEffect(() => {
     if (activeSession) {
       localStorage.setItem("activeSession", JSON.stringify(activeSession));
+      localStorage.setItem("verifiedMemorizations", JSON.stringify(verifiedMemorizations));
     } else {
       localStorage.removeItem("activeSession");
+      localStorage.removeItem("verifiedMemorizations");
     }
     localStorage.setItem("isPaused", JSON.stringify(isPaused));
     localStorage.setItem("elapsedTime", elapsedTime.toString());
-  }, [activeSession, isPaused, elapsedTime]);
+  }, [activeSession, isPaused, elapsedTime, verifiedMemorizations]);
+
+  // Add storage event listener for cross-tab synchronization
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "activeSession") {
+        if (e.newValue) {
+          setActiveSession(JSON.parse(e.newValue));
+        } else {
+          setActiveSession(null);
+        }
+      } else if (e.key === "isPaused") {
+        if (e.newValue) {
+          setIsPaused(JSON.parse(e.newValue));
+        }
+      } else if (e.key === "elapsedTime") {
+        if (e.newValue) {
+          setElapsedTime(parseInt(e.newValue));
+        }
+      } else if (e.key === "verifiedMemorizations") {
+        if (e.newValue) {
+          setVerifiedMemorizations(JSON.parse(e.newValue));
+        } else {
+          setVerifiedMemorizations([]);
+        }
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
 
   // Effect for checking session status
   useEffect(() => {
@@ -252,6 +286,12 @@ export default function MurajaahPage() {
         setVerifiedMemorizations(data.verifiedMemorizations);
         setElapsedTime(0);
         setIsPaused(false);
+        
+        // Store in localStorage
+        localStorage.setItem("activeSession", JSON.stringify(data.session));
+        localStorage.setItem("verifiedMemorizations", JSON.stringify(data.verifiedMemorizations));
+        localStorage.setItem("elapsedTime", "0");
+        localStorage.setItem("isPaused", "false");
       }
     } catch (error) {
       console.error("Failed to start revision:", error);
