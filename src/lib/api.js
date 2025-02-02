@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000/api";
+import { API_BASE_URL } from '@/config';
 
 async function refreshAccessToken() {
   try {
@@ -7,7 +7,7 @@ async function refreshAccessToken() {
       throw new Error("No refresh token found");
     }
 
-    const response = await fetch(`${API_URL}/users/refresh-token`, {
+    const response = await fetch(`${API_BASE_URL}/users/refresh-token`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -31,19 +31,37 @@ async function refreshAccessToken() {
   }
 }
 
-export async function apiCall(endpoint, options = {}) {
+export const apiCall = async (endpoint, options = {}) => {
+  const url = `${API_BASE_URL}${endpoint}`;
+  
+  const defaultOptions = {
+    headers: {
+      'Content-Type': 'application/json',
+      // Add any default headers here
+    },
+  };
+
+  const finalOptions = {
+    ...defaultOptions,
+    ...options,
+    headers: {
+      ...defaultOptions.headers,
+      ...options.headers,
+    },
+  };
+
   const accessToken = localStorage.getItem("accessToken");
   
   // Add authorization header if token exists
   if (accessToken) {
-    options.headers = {
-      ...options.headers,
+    finalOptions.headers = {
+      ...finalOptions.headers,
       Authorization: `Bearer ${accessToken}`,
     };
   }
 
   try {
-    const response = await fetch(`${API_URL}${endpoint}`, options);
+    const response = await fetch(url, finalOptions);
 
     // If unauthorized and we have a refresh token, try to refresh
     if (response.status === 401 && localStorage.getItem("refreshToken")) {
@@ -52,14 +70,14 @@ export async function apiCall(endpoint, options = {}) {
         
         // Retry the original request with new token
         const retryOptions = {
-          ...options,
+          ...finalOptions,
           headers: {
-            ...options.headers,
+            ...finalOptions.headers,
             Authorization: `Bearer ${newAccessToken}`,
           },
         };
         
-        const retryResponse = await fetch(`${API_URL}${endpoint}`, retryOptions);
+        const retryResponse = await fetch(url, retryOptions);
         return retryResponse;
       } catch (refreshError) {
         // If refresh fails, redirect to login
@@ -75,4 +93,4 @@ export async function apiCall(endpoint, options = {}) {
     }
     throw error;
   }
-} 
+}; 

@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { apiCall } from "@/lib/api";
+import { API_BASE_URL } from '@/config';
 
 const formatDate = () => {
   const options = { 
@@ -32,7 +33,7 @@ export default function MemorizationPage() {
   useEffect(() => {
     const fetchSurahs = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/surahs", {
+        const response = await fetch(`${API_BASE_URL}/surahs`, {
         });
         const data = await response.json();
         setSurahs(data);

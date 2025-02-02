@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { API_BASE_URL } from '@/config';
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -23,7 +24,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5000/api/users/login", {
+      const response = await fetch(`${API_BASE_URL}/users/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
