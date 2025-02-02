@@ -409,45 +409,53 @@ export default function MurajaahPage() {
           </TabsList>
 
           <TabsContent value="surah" className="space-y-4">
-            {memorizedData.bySurah.map((surah) => (
-              <Card key={surah.surahNumber}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    {surah.surahEnglishName}: {surah.verses}
-                  </CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={async () => {
-                      const isActive = verifiedMemorizations.some(mem => mem.surahNumber === surah.surahNumber);
-                      if (activeSession && isActive) {
-                        // Call pauseRevision endpoint
-                        const response = await apiCall(`/revisions/${activeSession._id}/pause`, {
-                          method: 'PUT',
-                          headers: {
-                            'Content-Type': 'application/json',
-                          },
-                        });
-                        const data = await response.json();
-                        setIsPaused(data.session.isPaused);
-                      } else {
-                        handleStartMurajaah("surah", surah.surahNumber);
-                      }
-                    }}
-                  >
-                    {activeSession && verifiedMemorizations.some(mem => mem.surahNumber === surah.surahNumber) ? (
-                      isPaused ? (
-                        <Play className="h-4 w-4" />
+            {memorizedData.bySurah.map((surah) => {
+              const isActive = verifiedMemorizations.some(mem => mem.surahNumber === surah.surahNumber);
+              return (
+                <Card 
+                  key={surah.surahNumber}
+                  className={cn(
+                    activeSession && isActive && "bg-primary/5 border-primary",
+                    "transition-colors duration-200"
+                  )}
+                >
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      {surah.surahEnglishName}: {surah.verses}
+                    </CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        if (activeSession && isActive) {
+                          // Call pauseRevision endpoint
+                          const response = await apiCall(`/revisions/${activeSession._id}/pause`, {
+                            method: 'PUT',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                          });
+                          const data = await response.json();
+                          setIsPaused(data.session.isPaused);
+                        } else {
+                          handleStartMurajaah("surah", surah.surahNumber);
+                        }
+                      }}
+                    >
+                      {activeSession && isActive ? (
+                        isPaused ? (
+                          <Play className="h-4 w-4" />
+                        ) : (
+                          <Pause className="h-4 w-4" />
+                        )
                       ) : (
-                        <Pause className="h-4 w-4" />
-                      )
-                    ) : (
-                      <Play className="h-4 w-4" />
-                    )}
-                  </Button>
-                </CardHeader>
-              </Card>
-            ))}
+                        <Play className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </CardHeader>
+                </Card>
+              );
+            })}
 
             <Dialog open={showSurahDialog} onOpenChange={setShowSurahDialog}>
               <DialogTrigger asChild>
@@ -521,54 +529,62 @@ export default function MurajaahPage() {
           </TabsContent>
 
           <TabsContent value="juz" className="space-y-4">
-            {memorizedData.byJuz.map((juz) => (
-              <Card key={juz.juzNumber}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Juz {juz.juzNumber}
-                  </CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={async () => {
-                      const isActive = verifiedMemorizations.some(mem => mem.juzNumber === juz.juzNumber);
-                      if (activeSession && isActive) {
-                        // Call pauseRevision endpoint
-                        const response = await apiCall(`/revisions/${activeSession._id}/pause`, {
-                          method: 'PUT',
-                          headers: {
-                            'Content-Type': 'application/json',
-                          },
-                        });
-                        const data = await response.json();
-                        setIsPaused(data.session.isPaused);
-                      } else {
-                        handleStartMurajaah("juz", juz.juzNumber);
-                      }
-                    }}
-                  >
-                    {activeSession && verifiedMemorizations.some(mem => mem.juzNumber === juz.juzNumber) ? (
-                      isPaused ? (
-                        <Play className="h-4 w-4" />
+            {memorizedData.byJuz.map((juz) => {
+              const isActive = verifiedMemorizations.some(mem => mem.juzNumber === juz.juzNumber);
+              return (
+                <Card 
+                  key={juz.juzNumber}
+                  className={cn(
+                    activeSession && isActive && "bg-primary/5 border-primary",
+                    "transition-colors duration-200"
+                  )}
+                >
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      Juz {juz.juzNumber}
+                    </CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        if (activeSession && isActive) {
+                          // Call pauseRevision endpoint
+                          const response = await apiCall(`/revisions/${activeSession._id}/pause`, {
+                            method: 'PUT',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                          });
+                          const data = await response.json();
+                          setIsPaused(data.session.isPaused);
+                        } else {
+                          handleStartMurajaah("juz", juz.juzNumber);
+                        }
+                      }}
+                    >
+                      {activeSession && isActive ? (
+                        isPaused ? (
+                          <Play className="h-4 w-4" />
+                        ) : (
+                          <Pause className="h-4 w-4" />
+                        )
                       ) : (
-                        <Pause className="h-4 w-4" />
-                      )
-                    ) : (
-                      <Play className="h-4 w-4" />
-                    )}
-                  </Button>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-sm space-y-1">
-                    {Object.values(juz.surahs).map((surah) => (
-                      <div key={surah.surahNumber}>
-                        {surah.surahEnglishName}: {surah.verses}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                        <Play className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm space-y-1">
+                      {Object.values(juz.surahs).map((surah) => (
+                        <div key={surah.surahNumber}>
+                          {surah.surahEnglishName}: {surah.verses}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
 
             <Dialog open={showJuzDialog} onOpenChange={setShowJuzDialog}>
               <DialogTrigger asChild>
