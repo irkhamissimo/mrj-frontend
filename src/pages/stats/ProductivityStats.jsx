@@ -100,7 +100,7 @@ function ProductivityStats() {
   else if (activeTab === 'monthly') xAxisKey = 'month';
 
   return (
-    <div className="p-4">
+    <div className="p-4 border border-gray-200 rounded-lg shadow-sm bg-white">
       <h1 className="text-2xl font-bold mb-4 text-center">Productivity Statistics</h1>
       {/* Tab Navigation */}
       <div className="flex justify-center mb-4 space-x-2">
