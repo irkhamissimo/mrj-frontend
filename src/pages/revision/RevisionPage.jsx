@@ -103,17 +103,17 @@ export default function RevisionPage() {
     }
   };
 
-  // Timer effect for active session
+  // Timer effect: update every second and compare to total duration (minutes * 60 seconds).
   useEffect(() => {
     let interval;
     if (activeSession && !isPaused) {
       interval = setInterval(() => {
-        setTimeElapsed((prev) => {
-          const duration = parseInt(revisionDurations[completedSessions + 1]);
-          if (prev >= duration) {
+        setTimeElapsed(prev => {
+          const totalDurationSeconds = parseInt(revisionDurations[completedSessions + 1]) * 60;
+          if (prev >= totalDurationSeconds) {
             clearInterval(interval);
             handleSessionComplete();
-            return duration;
+            return totalDurationSeconds;
           }
           return prev + 1;
         });
@@ -122,6 +122,7 @@ export default function RevisionPage() {
     return () => clearInterval(interval);
   }, [activeSession, isPaused, revisionDurations, completedSessions]);
 
+  // When starting a revision session, send duration in minutes.
   const handleStartRevision = async (sessionNumber) => {
     try {
       const response = await apiCall(`/memorizations/${entryId}/revisions`, {
@@ -130,6 +131,7 @@ export default function RevisionPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          // Send duration in minutes directly as expected by the API.
           duration: parseInt(revisionDurations[sessionNumber])
         }),
       });
@@ -163,10 +165,13 @@ export default function RevisionPage() {
     }
   };
 
-  const formatTime = (seconds) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  // formatTime now displays remaining time in minutes.
+  // It calculates: total duration in seconds - elapsed seconds, and then converts remaining seconds to minutes.
+  const formatTime = (elapsedSeconds) => {
+    const totalDurationSeconds = parseInt(revisionDurations[completedSessions + 1]) * 60;
+    const remainingSeconds = totalDurationSeconds - elapsedSeconds;
+    const remainingMinutes = Math.ceil(remainingSeconds / 60);
+    return `${remainingMinutes} menit`;
   };
 
   if (!memorization) return null;
@@ -214,12 +219,12 @@ export default function RevisionPage() {
                       r="58"
                       className="stroke-primary fill-none"
                       strokeWidth="12"
-                      strokeDasharray={`${(timeElapsed / parseInt(revisionDurations[completedSessions + 1])) * 365} 365`}
+                      strokeDasharray={`${(timeElapsed / (parseInt(revisionDurations[completedSessions + 1]) * 60)) * 365} 365`}
                     />
                   )}
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center text-2xl font-bold">
-                  {activeSession ? formatTime(timeElapsed) : "00:00"}
+                  {activeSession ? formatTime(timeElapsed) : "0 menit"}
                 </div>
               </div>
               {/* Session Indicators */}
@@ -255,10 +260,10 @@ export default function RevisionPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="10">10 detik</SelectItem>
-                      <SelectItem value="15">15 detik</SelectItem>
-                      <SelectItem value="20">20 detik</SelectItem>
-                      <SelectItem value="25">25 detik</SelectItem>
+                      <SelectItem value="10">10 menit</SelectItem>
+                      <SelectItem value="15">15 menit</SelectItem>
+                      <SelectItem value="20">20 menit</SelectItem>
+                      <SelectItem value="25">25 menit</SelectItem>
                     </SelectContent>
                   </Select>
                   {sessionNumber === completedSessions + 1 && !activeSession && (
