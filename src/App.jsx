@@ -8,6 +8,7 @@ import VaultPage from "./pages/vault/VaultPage";
 import MurajaahPage from "./pages/murajaah/MurajaahPage";
 import MurajaahPlayer from "./pages/murajaah/MurajaahPlayer";
 import ZiyadahPage from "./pages/ziyadah/ZiyadahPage";
+import ProductivityStats from "./pages/stats/ProductivityStats";
 function App() {
   return (
     <Router>
@@ -80,6 +81,16 @@ function App() {
               </Layout>
             </PrivateRoute>
           } 
+        />
+        <Route
+          path="/stats"
+          element={
+            <PrivateRoute>
+              <Layout>
+                <ProductivityStats /> 
+              </Layout>
+            </PrivateRoute>
+          }
         />
       </Routes>
     </Router>
