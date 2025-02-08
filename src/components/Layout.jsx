@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { apiCall } from "@/lib/api";
-
+import LogoutButton from "./LogoutButton";
 export default function Layout({ children }) {
   const location = useLocation();
   const [menuItems, setMenuItems] = useState([]);
@@ -44,6 +44,11 @@ export default function Layout({ children }) {
                   {item.title}
                 </Link>
               ))}
+            </div>
+          
+            
+            <div className="flex space-x-4">
+              <LogoutButton />
             </div>
           </div>
         </div>
