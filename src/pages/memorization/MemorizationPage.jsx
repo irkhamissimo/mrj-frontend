@@ -27,7 +27,6 @@ export default function MemorizationPage() {
   const [completedSessions, setCompletedSessions] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [todayMemorization, setTodayMemorization] = useState(null);
-  const [lastStatusCheck, setLastStatusCheck] = useState(0);
 
   // Fetch surahs on component mount
   useEffect(() => {
@@ -95,7 +94,7 @@ export default function MemorizationPage() {
         const storedIsPaused = localStorage.getItem('isPaused');
         const storedTimeElapsed = localStorage.getItem('timeElapsed');
         
-        if (storedMemorization) {
+        if (storedMemorization && formatDate() === todayMemorization?.dateStarted) {
           const parsedMemorization = JSON.parse(storedMemorization);
           setTodayMemorization(parsedMemorization);
           
