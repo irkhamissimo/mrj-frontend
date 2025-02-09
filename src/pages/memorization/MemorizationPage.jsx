@@ -86,34 +86,104 @@ export default function MemorizationPage() {
     return Math.min(25, Math.max(0, Math.floor(elapsedMs / 1000)));
   }, [todayMemorization?.currentSession, isPaused]);
 
+  // Load session state from localStorage on mount
+  useEffect(() => {
+    const initializeFromStorage = async () => {
+      try {
+        const storedMemorization = localStorage.getItem('todayMemorization');
+        const storedSessionStartTime = localStorage.getItem('sessionStartTime');
+        const storedIsPaused = localStorage.getItem('isPaused');
+        const storedTimeElapsed = localStorage.getItem('timeElapsed');
+        
+        if (storedMemorization) {
+          const parsedMemorization = JSON.parse(storedMemorization);
+          setTodayMemorization(parsedMemorization);
+          
+          if (parsedMemorization.currentSession?._id) {
+            const response = await apiCall(`/memorizations/sessions/${parsedMemorization.currentSession._id}/status`);
+            const data = await response.json();
+            
+            if (response.ok && !data.session.completed) {
+              setTodayMemorization(prev => ({
+                ...prev,
+                currentSession: data.session
+              }));
+              
+              if (storedIsPaused) {
+                setIsPaused(JSON.parse(storedIsPaused));
+              }
+              
+              if (storedTimeElapsed) {
+                setTimeElapsed(parseInt(storedTimeElapsed));
+              }
+            } else {
+              // Clear storage if session is completed or invalid
+              localStorage.removeItem('sessionStartTime');
+              localStorage.removeItem('timeElapsed');
+              localStorage.removeItem('isPaused');
+              localStorage.removeItem('todayMemorization');
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Failed to initialize from storage:", error);
+      }
+    };
+
+    initializeFromStorage();
+  }, []);
+
+  // Add storage event listener for cross-tab synchronization
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'todayMemorization') {
+        if (e.newValue) {
+          const newMemorization = JSON.parse(e.newValue);
+          setTodayMemorization(newMemorization);
+        } else {
+          setTodayMemorization(null);
+        }
+      } else if (e.key === 'sessionStartTime') {
+        if (e.newValue) {
+          const newElapsed = calculateTimeElapsed();
+          setTimeElapsed(newElapsed);
+        } else {
+          setTimeElapsed(0);
+        }
+      } else if (e.key === 'timeElapsed') {
+        if (e.newValue) {
+          setTimeElapsed(parseInt(e.newValue));
+        }
+      } else if (e.key === 'isPaused') {
+        if (e.newValue) {
+          setIsPaused(JSON.parse(e.newValue));
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [calculateTimeElapsed]);
+
+  // Update localStorage when todayMemorization changes
+  useEffect(() => {
+    if (todayMemorization) {
+      localStorage.setItem('todayMemorization', JSON.stringify(todayMemorization));
+    } else {
+      localStorage.removeItem('todayMemorization');
+    }
+  }, [todayMemorization]);
+
   // Effect for checking session status and updating timer
   useEffect(() => {
     let timerInterval;
     let statusInterval;
-    
-    const updateTimer = () => {
-      if (!todayMemorization?.currentSession || isPaused) return;
-      const newElapsed = calculateTimeElapsed();
-      if (newElapsed !== timeElapsed) {
-        setTimeElapsed(newElapsed);
-      }
-    };
 
     const checkSessionStatus = async () => {
       if (!todayMemorization?.currentSession) return;
 
-      // Only check status if enough time has passed (15 seconds)
-      const now = Date.now();
-      if (now - lastStatusCheck < 15000) return;
-      setLastStatusCheck(now);
-
       try {
-        const response = await apiCall(`/memorizations/sessions/${todayMemorization.currentSession._id}/status`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+        const response = await apiCall(`/memorizations/sessions/${todayMemorization.currentSession._id}/status`);
         const data = await response.json();
 
         if (response.ok && data.session) {
@@ -121,6 +191,9 @@ export default function MemorizationPage() {
             // Clear session data
             setTimeElapsed(25);
             localStorage.removeItem('sessionStartTime');
+            localStorage.removeItem('timeElapsed');
+            localStorage.removeItem('isPaused');
+            localStorage.removeItem('todayMemorization');
             
             // Fetch updated today's memorization data
             const memResponse = await apiCall("/memorizations/completedMemorizations");
@@ -129,16 +202,16 @@ export default function MemorizationPage() {
               const todayMem = memData[0];
               setTodayMemorization(todayMem);
               setCompletedSessions(todayMem.totalSessionsCompleted || 0);
-              
-              if (!startSurah || !startVerse || !endVerse) {
-                setStartSurah(todayMem.surahNumber.toString());
-                setStartVerse(todayMem.fromVerse.toString());
-                setEndSurah(todayMem.surahNumber.toString());
-                setEndVerse(todayMem.toVerse.toString());
-              }
             }
           } else {
-            setIsPaused(data.session.isPaused || false);
+            // Calculate elapsed time
+            const startTime = new Date(data.session.startTime);
+            const now = new Date();
+            const elapsed = Math.floor((now - startTime) / 1000);
+            const pauseDuration = data.session.totalPauseDuration || 0;
+            const adjustedElapsed = Math.floor(Math.max(0, elapsed - pauseDuration));
+            setTimeElapsed(Math.min(25, adjustedElapsed));
+            setIsPaused(data.session.isPaused);
             setTodayMemorization(prev => ({
               ...prev,
               currentSession: data.session
@@ -150,20 +223,19 @@ export default function MemorizationPage() {
       }
     };
 
+    // Only start checking status if there's an active session and it's not paused
     if (todayMemorization?.currentSession && !isPaused) {
-      // Initial update
-      updateTimer();
-
-      // Set up intervals with optimized frequencies
-      timerInterval = setInterval(updateTimer, 1000);
-      statusInterval = setInterval(checkSessionStatus, 15000); // Check status every 15 seconds
-
-      return () => {
-        clearInterval(timerInterval);
-        clearInterval(statusInterval);
-      };
+      // Check immediately and then set interval
+      checkSessionStatus();
+      statusInterval = setInterval(checkSessionStatus, 1000);
     }
-  }, [todayMemorization?.currentSession, isPaused, calculateTimeElapsed, lastStatusCheck]);
+
+    return () => {
+      if (statusInterval) {
+        clearInterval(statusInterval);
+      }
+    };
+  }, [todayMemorization?.currentSession, isPaused]);
 
   // Memoize the progress calculation
   const timerProgress = useMemo(() => {
@@ -176,57 +248,6 @@ export default function MemorizationPage() {
       localStorage.removeItem('sessionStartTime');
     };
   }, []);
-
-  // Add effect to initialize state from localStorage on mount
-  useEffect(() => {
-    const initializeFromStorage = async () => {
-      try {
-        // Get session start time from localStorage
-        const storedSessionStartTime = localStorage.getItem('sessionStartTime');
-        
-        if (storedSessionStartTime && todayMemorization?.currentSession?._id) {
-          // Verify if session is still active via API
-          const response = await apiCall(`/memorizations/sessions/${todayMemorization.currentSession._id}/status`, {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          });
-          const data = await response.json();
-          
-          if (response.ok && !data.session.completed) {
-            setTodayMemorization(prev => ({
-              ...prev,
-              currentSession: data.session
-            }));
-            setIsPaused(data.session.isPaused || false);
-            
-            // Set other related states
-            if (todayMemorization) {
-              setStartSurah(todayMemorization.surahNumber.toString());
-              setStartVerse(todayMemorization.fromVerse.toString());
-              setEndSurah(todayMemorization.surahNumber.toString());
-              setEndVerse(todayMemorization.toVerse.toString());
-            }
-          } else {
-            // Clear storage if session is completed or invalid
-            localStorage.removeItem('sessionStartTime');
-          }
-        }
-      } catch (error) {
-        console.error("Failed to initialize from storage:", error);
-      }
-    };
-
-    initializeFromStorage();
-  }, [todayMemorization?._id]);
-
-  // Update localStorage when todayMemorization changes
-  useEffect(() => {
-    if (todayMemorization?.currentSession?.startTime) {
-      localStorage.setItem('sessionStartTime', new Date(todayMemorization.currentSession.startTime).getTime());
-    }
-  }, [todayMemorization?.currentSession?.startTime]);
 
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
@@ -288,7 +309,7 @@ export default function MemorizationPage() {
           currentSession: data
         }));
         setTimeElapsed(0);
-        localStorage.setItem('sessionStartTime', new Date(data.startTime).getTime());
+        setIsPaused(false);
       } else {
         // Start new memorization entry
         response = await apiCall("/memorizations/start", {
@@ -314,7 +335,7 @@ export default function MemorizationPage() {
           currentSession: data.session
         });
         setTimeElapsed(0);
-        localStorage.setItem('sessionStartTime', new Date(data.session.startTime).getTime());
+        setIsPaused(false);
       }
     } catch (error) {
       console.error("Failed to start memorization:", error);
@@ -394,22 +415,6 @@ export default function MemorizationPage() {
       alert("Failed to finish memorization. Please try again.");
     }
   };
-
-  // Add storage event listener for cross-tab synchronization
-  useEffect(() => {
-    const handleStorageChange = (e) => {
-      if (e.key === 'sessionStartTime') {
-        if (e.newValue) {
-          localStorage.setItem('sessionStartTime', e.newValue);
-        } else {
-          localStorage.removeItem('sessionStartTime');
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
 
   return (
     <div className="space-y-4">
