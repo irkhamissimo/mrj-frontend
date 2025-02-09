@@ -24,6 +24,7 @@ export default function RevisionPage() {
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [completedSessions, setCompletedSessions] = useState(0);
+  const [sessionDuration, setSessionDuration] = useState(0);
   const [revisionDurations, setRevisionDurations] = useState({
     1: "10",
     2: "10",
@@ -31,6 +32,24 @@ export default function RevisionPage() {
     4: "10",
     5: "10"
   });
+
+  // On mount, check if there's an active session in localStorage and set states accordingly.
+  useEffect(() => {
+    const storedSession = localStorage.getItem("activeRevisionSession");
+    if (storedSession) {
+      const parsed = JSON.parse(storedSession);
+      setActiveSession({ _id: parsed.revisionSessionId });
+      setSessionDuration(parsed.sessionDuration);
+      setIsPaused(parsed.paused);
+      let effectiveTime = parsed.elapsedBeforePause;
+      if (!parsed.paused && parsed.startTime) {
+        effectiveTime =
+          Math.floor((Date.now() - parsed.startTime) / 1000) +
+          parsed.elapsedBeforePause;
+      }
+      setTimeElapsed(effectiveTime);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchMemorization = async () => {
@@ -77,6 +96,61 @@ export default function RevisionPage() {
     fetchRevisionSessions();
   }, [entryId]);
 
+  // Timer effect: update timeElapsed every second based on shared localStorage.
+  useEffect(() => {
+    if (!activeSession) return;
+
+    const intervalId = setInterval(() => {
+      const stored = localStorage.getItem("activeRevisionSession");
+      if (stored) {
+        const s = JSON.parse(stored);
+        let effectiveTime;
+        if (s.paused) {
+          effectiveTime = s.elapsedBeforePause;
+        } else {
+          effectiveTime =
+            Math.floor((Date.now() - s.startTime) / 1000) + s.elapsedBeforePause;
+        }
+        setTimeElapsed(effectiveTime);
+        if (effectiveTime >= s.sessionDuration) {
+          clearInterval(intervalId);
+          handleSessionComplete();
+        }
+      }
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [activeSession]);
+
+  // Listen for localStorage changes (i.e. across tabs)
+  useEffect(() => {
+    const handleStorageChange = (event) => {
+      if (event.key === "activeRevisionSession") {
+        const stored = event.newValue;
+        if (stored) {
+          const s = JSON.parse(stored);
+          setIsPaused(s.paused);
+          setSessionDuration(s.sessionDuration);
+          let effectiveTime = s.elapsedBeforePause;
+          if (!s.paused && s.startTime) {
+            effectiveTime =
+              Math.floor((Date.now() - s.startTime) / 1000) + s.elapsedBeforePause;
+          }
+          setTimeElapsed(effectiveTime);
+        } else {
+          // The session was removed (e.g., completed in another tab)
+          setActiveSession(null);
+          setTimeElapsed(0);
+          setSessionDuration(0);
+          setIsPaused(false);
+        }
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
   // Complete the active revision session
   const handleSessionComplete = async () => {
     if (!activeSession) return;
@@ -97,42 +171,25 @@ export default function RevisionPage() {
         setActiveSession(null);
         setIsPaused(false);
         setTimeElapsed(0);
+        setSessionDuration(0);
+        localStorage.removeItem("activeRevisionSession");
       }
     } catch (error) {
       console.error("Failed to complete session:", error);
     }
   };
 
-  // Timer effect: update every second and compare to total duration (minutes * 60 seconds).
-  useEffect(() => {
-    let interval;
-    if (activeSession && !isPaused) {
-      interval = setInterval(() => {
-        setTimeElapsed(prev => {
-          const totalDurationSeconds = parseInt(revisionDurations[completedSessions + 1]) * 60;
-          if (prev >= totalDurationSeconds) {
-            clearInterval(interval);
-            handleSessionComplete();
-            return totalDurationSeconds;
-          }
-          return prev + 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [activeSession, isPaused, revisionDurations, completedSessions]);
-
-  // When starting a revision session, send duration in minutes.
+  // When starting a revision session, store the session meta in localStorage
   const handleStartRevision = async (sessionNumber) => {
     try {
+      const durationMinutes = parseInt(revisionDurations[sessionNumber]);
       const response = await apiCall(`/memorizations/${entryId}/revisions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          // Send duration in minutes directly as expected by the API.
-          duration: parseInt(revisionDurations[sessionNumber])
+          duration: durationMinutes
         }),
       });
 
@@ -140,38 +197,88 @@ export default function RevisionPage() {
         const data = await response.json();
         setActiveSession(data.revisionSession);
         setTimeElapsed(0);
+        setSessionDuration(durationMinutes * 60);
+        setIsPaused(false);
+        const revisionSessionData = {
+          revisionSessionId: data.revisionSession._id,
+          startTime: Date.now(),
+          paused: false,
+          elapsedBeforePause: 0,
+          sessionDuration: durationMinutes * 60,
+        };
+        localStorage.setItem(
+          "activeRevisionSession",
+          JSON.stringify(revisionSessionData)
+        );
       }
     } catch (error) {
       console.error("Failed to start revision:", error);
     }
   };
 
+  // Toggle pause/resume and update localStorage so other tabs are in sync.
   const handleTogglePause = async () => {
     if (!activeSession) return;
 
     try {
-      const response = await apiCall(`/memorizations/revisions/${activeSession._id}/pause`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const stored = localStorage.getItem("activeRevisionSession");
+      if (!stored) return;
+      const s = JSON.parse(stored);
 
-      if (response.ok) {
-        setIsPaused(!isPaused);
+      if (!s.paused) {
+        // Pause: calculate effective elapsed time and update.
+        const effectiveTime =
+          Math.floor((Date.now() - s.startTime) / 1000) + s.elapsedBeforePause;
+        const updatedSession = {
+          ...s,
+          paused: true,
+          elapsedBeforePause: effectiveTime,
+          startTime: null,
+        };
+        localStorage.setItem(
+          "activeRevisionSession",
+          JSON.stringify(updatedSession)
+        );
+        setIsPaused(true);
+      } else {
+        // Resume: set a new start time.
+        const updatedSession = {
+          ...s,
+          paused: false,
+          startTime: Date.now(),
+        };
+        localStorage.setItem(
+          "activeRevisionSession",
+          JSON.stringify(updatedSession)
+        );
+        setIsPaused(false);
+      }
+
+      // Optionally, fire an API call to notify pause/resume action.
+      const response = await apiCall(
+        `/memorizations/revisions/${activeSession._id}/pause`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.error("Failed to toggle pause via API");
       }
     } catch (error) {
       console.error("Failed to toggle pause:", error);
     }
   };
 
-  // formatTime now displays remaining time in minutes.
-  // It calculates: total duration in seconds - elapsed seconds, and then converts remaining seconds to minutes.
+  // Updated formatTime function to display MM:SS format.
   const formatTime = (elapsedSeconds) => {
-    const totalDurationSeconds = parseInt(revisionDurations[completedSessions + 1]) * 60;
-    const remainingSeconds = totalDurationSeconds - elapsedSeconds;
-    const remainingMinutes = Math.ceil(remainingSeconds / 60);
-    return `${remainingMinutes} menit`;
+    const remainingSeconds = sessionDuration - elapsedSeconds;
+    const minutes = Math.floor(remainingSeconds / 60);
+    const seconds = remainingSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
   if (!memorization) return null;
@@ -219,12 +326,12 @@ export default function RevisionPage() {
                       r="58"
                       className="stroke-primary fill-none"
                       strokeWidth="12"
-                      strokeDasharray={`${(timeElapsed / (parseInt(revisionDurations[completedSessions + 1]) * 60)) * 365} 365`}
+                      strokeDasharray={`${(timeElapsed / sessionDuration) * 365} 365`}
                     />
                   )}
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center text-2xl font-bold">
-                  {activeSession ? formatTime(timeElapsed) : "0 menit"}
+                  {activeSession ? formatTime(timeElapsed) : "0:00"}
                 </div>
               </div>
               {/* Session Indicators */}
