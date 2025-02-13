@@ -6,25 +6,25 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
-import { API_BASE_URL } from '@/config';
+import { API_BASE_URL } from "@/config";
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const [formData, setFormData] = useState({
+    username: "",
     email: "",
     password: "",
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/users/login`, {
+      const response = await fetch(`${API_BASE_URL}/users/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -34,11 +34,12 @@ export default function LoginPage() {
 
       const data = await response.json();
       if (response.ok) {
+        // On successful registration, store tokens if returned and navigate to protected route.
         localStorage.setItem("accessToken", data.accessToken);
         localStorage.setItem("refreshToken", data.refreshToken);
         navigate("/ziyadah");
       } else {
-        setError(data.message || "Login failed. Please check your credentials.");
+        setError(data.message || "Registration failed. Please check your inputs.");
       }
     } catch (error) {
       setError("Connection error. Please try again.");
@@ -52,8 +53,8 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <Card className="w-full shadow-lg">
           <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl font-bold">Mindful Hafidz</CardTitle>
-            <CardDescription>Be a Mindful Hafidz</CardDescription>
+            <CardTitle className="text-2xl font-bold">Mindful Hafidz - Register</CardTitle>
+            <CardDescription>Create a new account</CardDescription>
           </CardHeader>
           <CardContent>
             {error && (
@@ -62,7 +63,21 @@ export default function LoginPage() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleRegister} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder="Enter your username"
+                  value={formData.username}
+                  onChange={(e) =>
+                    setFormData({ ...formData, username: e.target.value })
+                  }
+                  required
+                  className="transition-colors focus:border-primary"
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -91,18 +106,14 @@ export default function LoginPage() {
                   className="transition-colors focus:border-primary"
                 />
               </div>
-              <Button 
-                type="submit" 
-                className="w-full font-semibold"
-                disabled={isLoading}
-              >
-                {isLoading ? "Signing in..." : "Sign In"}
+              <Button type="submit" className="w-full font-semibold" disabled={isLoading}>
+                {isLoading ? "Registering..." : "Register"}
               </Button>
             </form>
             <p className="text-center mt-4">
-              Don't have an account?{" "}
-              <Link to="/register" className="text-blue-600 hover:underline">
-                Register here
+              Already have an account?{" "}
+              <Link to="/login" className="text-blue-600 hover:underline">
+                Sign In
               </Link>
             </p>
           </CardContent>

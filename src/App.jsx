@@ -8,11 +8,14 @@ import VaultPage from "./pages/vault/VaultPage";
 import MurajaahPage from "./pages/murajaah/MurajaahPage";
 import MurajaahPlayer from "./pages/murajaah/MurajaahPlayer";
 import ZiyadahPage from "./pages/ziyadah/ZiyadahPage";
+import ProductivityStats from "./pages/stats/ProductivityStats";
+import RegisterPage from "./pages/auth/RegisterPage";
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
         <Route 
           path="/" 
           element={
@@ -80,6 +83,16 @@ function App() {
               </Layout>
             </PrivateRoute>
           } 
+        />
+        <Route
+          path="/stats"
+          element={
+            <PrivateRoute>
+              <Layout>
+                <ProductivityStats /> 
+              </Layout>
+            </PrivateRoute>
+          }
         />
       </Routes>
     </Router>

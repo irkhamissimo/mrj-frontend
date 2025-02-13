@@ -159,22 +159,56 @@ export default function MurajaahPage() {
     const savedSession = localStorage.getItem("activeSession");
     const savedIsPaused = localStorage.getItem("isPaused");
     const savedElapsedTime = localStorage.getItem("elapsedTime");
+    const savedVerifiedMems = localStorage.getItem("verifiedMemorizations");
 
     if (savedSession) setActiveSession(JSON.parse(savedSession));
     if (savedIsPaused) setIsPaused(JSON.parse(savedIsPaused));
     if (savedElapsedTime) setElapsedTime(parseInt(savedElapsedTime));
+    if (savedVerifiedMems) setVerifiedMemorizations(JSON.parse(savedVerifiedMems));
   }, []);
 
   // Save session state to localStorage when it changes
   useEffect(() => {
     if (activeSession) {
       localStorage.setItem("activeSession", JSON.stringify(activeSession));
+      localStorage.setItem("verifiedMemorizations", JSON.stringify(verifiedMemorizations));
     } else {
       localStorage.removeItem("activeSession");
+      localStorage.removeItem("verifiedMemorizations");
     }
     localStorage.setItem("isPaused", JSON.stringify(isPaused));
     localStorage.setItem("elapsedTime", elapsedTime.toString());
-  }, [activeSession, isPaused, elapsedTime]);
+  }, [activeSession, isPaused, elapsedTime, verifiedMemorizations]);
+
+  // Add storage event listener for cross-tab synchronization
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "activeSession") {
+        if (e.newValue) {
+          setActiveSession(JSON.parse(e.newValue));
+        } else {
+          setActiveSession(null);
+        }
+      } else if (e.key === "isPaused") {
+        if (e.newValue) {
+          setIsPaused(JSON.parse(e.newValue));
+        }
+      } else if (e.key === "elapsedTime") {
+        if (e.newValue) {
+          setElapsedTime(parseInt(e.newValue));
+        }
+      } else if (e.key === "verifiedMemorizations") {
+        if (e.newValue) {
+          setVerifiedMemorizations(JSON.parse(e.newValue));
+        } else {
+          setVerifiedMemorizations([]);
+        }
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
 
   // Effect for checking session status
   useEffect(() => {
@@ -252,6 +286,12 @@ export default function MurajaahPage() {
         setVerifiedMemorizations(data.verifiedMemorizations);
         setElapsedTime(0);
         setIsPaused(false);
+        
+        // Store in localStorage
+        localStorage.setItem("activeSession", JSON.stringify(data.session));
+        localStorage.setItem("verifiedMemorizations", JSON.stringify(data.verifiedMemorizations));
+        localStorage.setItem("elapsedTime", "0");
+        localStorage.setItem("isPaused", "false");
       }
     } catch (error) {
       console.error("Failed to start revision:", error);
@@ -409,45 +449,53 @@ export default function MurajaahPage() {
           </TabsList>
 
           <TabsContent value="surah" className="space-y-4">
-            {memorizedData.bySurah.map((surah) => (
-              <Card key={surah.surahNumber}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    {surah.surahEnglishName}: {surah.verses}
-                  </CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={async () => {
-                      const isActive = verifiedMemorizations.some(mem => mem.surahNumber === surah.surahNumber);
-                      if (activeSession && isActive) {
-                        // Call pauseRevision endpoint
-                        const response = await apiCall(`/revisions/${activeSession._id}/pause`, {
-                          method: 'PUT',
-                          headers: {
-                            'Content-Type': 'application/json',
-                          },
-                        });
-                        const data = await response.json();
-                        setIsPaused(data.session.isPaused);
-                      } else {
-                        handleStartMurajaah("surah", surah.surahNumber);
-                      }
-                    }}
-                  >
-                    {activeSession && verifiedMemorizations.some(mem => mem.surahNumber === surah.surahNumber) ? (
-                      isPaused ? (
-                        <Play className="h-4 w-4" />
+            {memorizedData.bySurah.map((surah) => {
+              const isActive = verifiedMemorizations.some(mem => mem.surahNumber === surah.surahNumber);
+              return (
+                <Card 
+                  key={surah.surahNumber}
+                  className={cn(
+                    activeSession && isActive && "bg-primary/5 border-primary",
+                    "transition-colors duration-200"
+                  )}
+                >
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      {surah.surahEnglishName}: {surah.verses}
+                    </CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        if (activeSession && isActive) {
+                          // Call pauseRevision endpoint
+                          const response = await apiCall(`/revisions/${activeSession._id}/pause`, {
+                            method: 'PUT',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                          });
+                          const data = await response.json();
+                          setIsPaused(data.session.isPaused);
+                        } else {
+                          handleStartMurajaah("surah", surah.surahNumber);
+                        }
+                      }}
+                    >
+                      {activeSession && isActive ? (
+                        isPaused ? (
+                          <Play className="h-4 w-4" />
+                        ) : (
+                          <Pause className="h-4 w-4" />
+                        )
                       ) : (
-                        <Pause className="h-4 w-4" />
-                      )
-                    ) : (
-                      <Play className="h-4 w-4" />
-                    )}
-                  </Button>
-                </CardHeader>
-              </Card>
-            ))}
+                        <Play className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </CardHeader>
+                </Card>
+              );
+            })}
 
             <Dialog open={showSurahDialog} onOpenChange={setShowSurahDialog}>
               <DialogTrigger asChild>
@@ -521,54 +569,62 @@ export default function MurajaahPage() {
           </TabsContent>
 
           <TabsContent value="juz" className="space-y-4">
-            {memorizedData.byJuz.map((juz) => (
-              <Card key={juz.juzNumber}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Juz {juz.juzNumber}
-                  </CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={async () => {
-                      const isActive = verifiedMemorizations.some(mem => mem.juzNumber === juz.juzNumber);
-                      if (activeSession && isActive) {
-                        // Call pauseRevision endpoint
-                        const response = await apiCall(`/revisions/${activeSession._id}/pause`, {
-                          method: 'PUT',
-                          headers: {
-                            'Content-Type': 'application/json',
-                          },
-                        });
-                        const data = await response.json();
-                        setIsPaused(data.session.isPaused);
-                      } else {
-                        handleStartMurajaah("juz", juz.juzNumber);
-                      }
-                    }}
-                  >
-                    {activeSession && verifiedMemorizations.some(mem => mem.juzNumber === juz.juzNumber) ? (
-                      isPaused ? (
-                        <Play className="h-4 w-4" />
+            {memorizedData.byJuz.map((juz) => {
+              const isActive = verifiedMemorizations.some(mem => mem.juzNumber === juz.juzNumber);
+              return (
+                <Card 
+                  key={juz.juzNumber}
+                  className={cn(
+                    activeSession && isActive && "bg-primary/5 border-primary",
+                    "transition-colors duration-200"
+                  )}
+                >
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      Juz {juz.juzNumber}
+                    </CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        if (activeSession && isActive) {
+                          // Call pauseRevision endpoint
+                          const response = await apiCall(`/revisions/${activeSession._id}/pause`, {
+                            method: 'PUT',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                          });
+                          const data = await response.json();
+                          setIsPaused(data.session.isPaused);
+                        } else {
+                          handleStartMurajaah("juz", juz.juzNumber);
+                        }
+                      }}
+                    >
+                      {activeSession && isActive ? (
+                        isPaused ? (
+                          <Play className="h-4 w-4" />
+                        ) : (
+                          <Pause className="h-4 w-4" />
+                        )
                       ) : (
-                        <Pause className="h-4 w-4" />
-                      )
-                    ) : (
-                      <Play className="h-4 w-4" />
-                    )}
-                  </Button>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-sm space-y-1">
-                    {Object.values(juz.surahs).map((surah) => (
-                      <div key={surah.surahNumber}>
-                        {surah.surahEnglishName}: {surah.verses}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                        <Play className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm space-y-1">
+                      {Object.values(juz.surahs).map((surah) => (
+                        <div key={surah.surahNumber}>
+                          {surah.surahEnglishName}: {surah.verses}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
 
             <Dialog open={showJuzDialog} onOpenChange={setShowJuzDialog}>
               <DialogTrigger asChild>
