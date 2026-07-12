@@ -27,6 +27,7 @@ export default function MemorizationPage() {
   const [completedSessions, setCompletedSessions] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [todayMemorization, setTodayMemorization] = useState(null);
+  const [initialLoading, setInitialLoading] = useState(true);
   
   // Use refs to avoid unnecessary re-renders
   const timerIntervalRef = useRef(null);
@@ -61,7 +62,13 @@ export default function MemorizationPage() {
         const data = await response.json();
         if (response.ok && data.length > 0) {
           const todayMem = data[0];
-          setTodayMemorization(todayMem);
+          // Preserve currentSession if already restored from localStorage
+          setTodayMemorization(prev => {
+            if (prev?.currentSession && !todayMem.currentSession && prev._id === todayMem._id) {
+              return { ...todayMem, currentSession: prev.currentSession };
+            }
+            return todayMem;
+          });
           // Set the form values based on today's memorization
           setStartSurah(todayMem.surahNumber.toString());
           setStartVerse(todayMem.fromVerse.toString());
@@ -74,7 +81,7 @@ export default function MemorizationPage() {
       }
     };
 
-    fetchTodayMemorization();
+    fetchTodayMemorization().finally(() => setInitialLoading(false));
   }, []);
 
   // Load session state from localStorage on mount
@@ -86,38 +93,46 @@ export default function MemorizationPage() {
         const storedIsPaused = localStorage.getItem('isPaused');
         const storedTimeElapsed = localStorage.getItem('timeElapsed');
         
-        if (storedMemorization && formatDate() === todayMemorization?.dateStarted) {
-          const parsedMemorization = JSON.parse(storedMemorization);
-          setTodayMemorization(parsedMemorization);
+        if (!storedMemorization) return;
+        
+        const parsedMemorization = JSON.parse(storedMemorization);
+        
+        if (parsedMemorization.currentSession?._id) {
+          const response = await apiCall(`/memorizations/sessions/${parsedMemorization.currentSession._id}/status`);
+          const data = await response.json();
           
-          if (parsedMemorization.currentSession?._id) {
-            const response = await apiCall(`/memorizations/sessions/${parsedMemorization.currentSession._id}/status`);
-            const data = await response.json();
+          if (response.ok && !data.session.completed) {
+            setTodayMemorization(prev => {
+              // If fetchTodayMemorization already set the base entry, merge in currentSession
+              if (prev && prev._id === parsedMemorization._id) {
+                return { ...prev, currentSession: data.session };
+              }
+              return { ...parsedMemorization, currentSession: data.session };
+            });
             
-            if (response.ok && !data.session.completed) {
-              setTodayMemorization(prev => ({
-                ...prev,
-                currentSession: data.session
-              }));
-              
-              if (storedIsPaused) {
-                setIsPaused(JSON.parse(storedIsPaused));
-              }
-              
-              if (storedTimeElapsed) {
-                setTimeElapsed(parseInt(storedTimeElapsed));
-              }
-              
-              if (storedSessionStartTime) {
-                sessionStartTimeRef.current = parseInt(storedSessionStartTime);
-              }
-            } else {
-              // Clear storage if session is completed or invalid
-              localStorage.removeItem('sessionStartTime');
-              localStorage.removeItem('timeElapsed');
-              localStorage.removeItem('isPaused');
-              localStorage.removeItem('todayMemorization');
+            setStartSurah(parsedMemorization.surahNumber?.toString());
+            setStartVerse(parsedMemorization.fromVerse?.toString());
+            setEndSurah(parsedMemorization.surahNumber?.toString());
+            setEndVerse(parsedMemorization.toVerse?.toString());
+            setCompletedSessions(parsedMemorization.totalSessionsCompleted || 0);
+            
+            if (storedIsPaused) {
+              setIsPaused(JSON.parse(storedIsPaused));
             }
+            
+            if (storedTimeElapsed) {
+              setTimeElapsed(parseInt(storedTimeElapsed));
+            }
+            
+            if (storedSessionStartTime) {
+              sessionStartTimeRef.current = parseInt(storedSessionStartTime);
+            }
+          } else {
+            // Clear storage if session is completed or invalid
+            localStorage.removeItem('sessionStartTime');
+            localStorage.removeItem('timeElapsed');
+            localStorage.removeItem('isPaused');
+            localStorage.removeItem('todayMemorization');
           }
         }
       } catch (error) {
@@ -579,28 +594,34 @@ export default function MemorizationPage() {
           </div>
         </div>
 
-        <div className="flex gap-4">
+        {initialLoading ? null : todayMemorization?.status === "completed" ? (
           <Button
-            className="flex-1"
-            onClick={todayMemorization?.currentSession ? handleTogglePause : handleStartMemorization}
-            disabled={
-              (!startSurah || !startVerse || !endSurah || !endVerse) && !todayMemorization?.currentSession ||
-              todayMemorization?.status === "completed"
-            }
+            className="w-full"
+            onClick={() => navigate(`/revision/${todayMemorization._id}`)}
           >
-            {todayMemorization?.currentSession 
-              ? (isPaused ? "Lanjutkan" : "Jeda") 
-              : "Mulai"}
+            Murajaah Hafalan Baru
           </Button>
-          
-          <Button
-            className="flex-1"
-            onClick={handleFinishMemorization}
-            variant="secondary"
-          >
-            Selesai
-          </Button>
-        </div>
+        ) : (
+          <div className="flex gap-4">
+            <Button
+              className="flex-1"
+              onClick={todayMemorization?.currentSession ? handleTogglePause : handleStartMemorization}
+              disabled={(!startSurah || !startVerse || !endSurah || !endVerse) && !todayMemorization?.currentSession}
+            >
+              {todayMemorization?.currentSession 
+                ? (isPaused ? "Lanjutkan" : "Jeda") 
+                : "Mulai"}
+            </Button>
+            
+            <Button
+              className="flex-1"
+              onClick={handleFinishMemorization}
+              variant="secondary"
+            >
+              Selesai
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
