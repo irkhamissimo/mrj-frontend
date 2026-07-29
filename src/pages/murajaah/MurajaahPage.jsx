@@ -25,9 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { popoverClasses } from "@mui/material";
 
 function SessionIndicators({
   completedSessions = 0,
@@ -529,21 +527,39 @@ export default function MurajaahPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="fromVerse">Dari Ayat</Label>
-                      <Input
-                        id="fromVerse"
-                        type="number"
-                        value={fromVerse}
-                        onChange={(e) => setFromVerse(e.target.value)}
-                      />
+                      <Select value={fromVerse} onValueChange={setFromVerse}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih ayat" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedSurah &&
+                            [...Array(
+                              surahs.find(s => s.number === parseInt(selectedSurah))?.numberOfAyahs || 0
+                            )].map((_, i) => (
+                              <SelectItem key={i + 1} value={(i + 1).toString()}>
+                                Ayat {i + 1}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="toVerse">Sampai Ayat</Label>
-                      <Input
-                        id="toVerse"
-                        type="number"
-                        value={toVerse}
-                        onChange={(e) => setToVerse(e.target.value)}
-                      />
+                      <Select value={toVerse} onValueChange={setToVerse}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih ayat" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedSurah &&
+                            [...Array(
+                              surahs.find(s => s.number === parseInt(selectedSurah))?.numberOfAyahs || 0
+                            )].map((_, i) => (
+                              <SelectItem key={i + 1} value={(i + 1).toString()}>
+                                Ayat {i + 1}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                   <Button
