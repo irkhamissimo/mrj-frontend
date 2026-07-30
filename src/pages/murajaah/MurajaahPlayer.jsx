@@ -193,7 +193,7 @@ export default function MurajaahPlayer() {
         
         setActiveSession(null);
         setIsPaused(false);
-        setTimeElapsed(25); // Set to max duration when completed
+        setTimeElapsed(1500); // Set to max duration when completed
         navigate('/murajaah');
       }
     } catch (error) {
@@ -204,7 +204,7 @@ export default function MurajaahPlayer() {
   // Start revision session
   const handleStartRevision = async () => {
     try {
-      // make duration 25 seconds
+      // 25 minutes duration
       const duration = 25;
       const response = await apiCall("/revisions/start", {
         method: "POST",
@@ -263,13 +263,13 @@ export default function MurajaahPlayer() {
       const startTime = new Date(activeSession.startTime);
       const pauseDuration = activeSession.totalPauseDuration || 0;
       const initialElapsed = Math.floor((now - startTime) / 1000) - (pauseDuration * 60);
-      setTimeElapsed(Math.min(25, Math.max(0, initialElapsed)));
+      setTimeElapsed(Math.min(1500, Math.max(0, initialElapsed)));
 
       interval = setInterval(() => {
         setTimeElapsed((prev) => {
-          if (prev >= 25) {
+          if (prev >= 1500) {
             clearInterval(interval);
-            return 25;
+            return 1500;
           }
           return prev + 1;
         });
@@ -407,10 +407,10 @@ export default function MurajaahPlayer() {
                 r="60"
                 className={cn(
                   "fill-none transition-all duration-500",
-                  timeElapsed >= 25 ? "stroke-green-500" : "stroke-primary"
+                  timeElapsed >= 1500 ? "stroke-green-500" : "stroke-primary"
                 )}
                 strokeWidth="8"
-                strokeDasharray={`${(timeElapsed / 25) * 377} 377`}
+                strokeDasharray={`${(timeElapsed / 1500) * 377} 377`}
               />
             )}
           </svg>

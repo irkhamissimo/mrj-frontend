@@ -32,8 +32,7 @@ function SessionIndicators({
   elapsedTime = 0,
   duration = 25,
 }) {
-  // Convert duration to seconds for calculation (25 seconds for testing)
-  const durationInSeconds = duration; // Changed from duration * 60
+  const durationInSeconds = duration * 60;
   const progress = (elapsedTime / durationInSeconds) * 100;
   const circumference = 2 * Math.PI * 28; // 28 is the radius of our circle
 
@@ -239,9 +238,9 @@ export default function MurajaahPage() {
           const startTime = new Date(data.session.startTime);
           const now = new Date();
           const elapsed = Math.floor((now - startTime) / 1000);
-          const pauseDuration = data.session.totalPauseDuration || 0;
+          const pauseDuration = (data.session.totalPauseDuration || 0) * 60;
           const adjustedElapsed = Math.floor(Math.max(0, elapsed - pauseDuration));
-          setElapsedTime(Math.min(25, adjustedElapsed));
+          setElapsedTime(Math.min(1500, adjustedElapsed));
           setIsPaused(data.session.isPaused);
         }
       } catch (error) {
@@ -274,7 +273,7 @@ export default function MurajaahPage() {
         body: JSON.stringify({
           type: type,
           identifier: identifier,
-          duration: 25 // 25 seconds duration
+          duration: 25 // 25 minutes
         }),
       });
 
