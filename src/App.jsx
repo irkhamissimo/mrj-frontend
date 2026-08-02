@@ -9,6 +9,7 @@ import MurajaahPage from "./pages/murajaah/MurajaahPage";
 import MurajaahPlayer from "./pages/murajaah/MurajaahPlayer";
 import ZiyadahPage from "./pages/ziyadah/ZiyadahPage";
 import ProductivityStats from "./pages/stats/ProductivityStats";
+import LeaderboardPage from "./pages/gamification/LeaderboardPage";
 import RegisterPage from "./pages/auth/RegisterPage";
 function App() {
   return (
@@ -90,6 +91,16 @@ function App() {
             <PrivateRoute>
               <Layout>
                 <ProductivityStats /> 
+              </Layout>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/leaderboard"
+          element={
+            <PrivateRoute>
+              <Layout>
+                <LeaderboardPage />
               </Layout>
             </PrivateRoute>
           }

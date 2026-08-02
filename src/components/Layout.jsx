@@ -6,6 +6,7 @@ import LogoutButton from "./LogoutButton";
 export default function Layout({ children }) {
   const location = useLocation();
   const [menuItems, setMenuItems] = useState([]);
+  const [gamification, setGamification] = useState(null);
 
   useEffect(() => {
     const fetchMenuItems = async () => {
@@ -26,6 +27,22 @@ export default function Layout({ children }) {
     fetchMenuItems();
   }, []);
 
+  useEffect(() => {
+    const fetchGamification = async () => {
+      try {
+        const response = await apiCall("/gamification/me");
+        const data = await response.json();
+        if (response.ok) {
+          setGamification(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch gamification stats:", error);
+      }
+    };
+
+    fetchGamification();
+  }, []);
+
   return (
     <div className="min-h-screen bg-background relative pt-8 pb-24">
       {/* Top header with title and logout button */}
@@ -34,7 +51,18 @@ export default function Layout({ children }) {
           <div className="text-lg font-semibold">
             Mindful Hafidz
           </div>
-          <LogoutButton />
+          <div className="flex items-center gap-3">
+            {gamification && (
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <span title={`${gamification.streak}-day streak`}>🔥 {gamification.streak}</span>
+                <span>·</span>
+                <span title="Total points">⭐ {gamification.totalPoints}</span>
+                <span>·</span>
+                <span title={`Level ${gamification.level + 1}`}>🏅 {gamification.title}</span>
+              </div>
+            )}
+            <LogoutButton />
+          </div>
         </div>
       </header>
 
