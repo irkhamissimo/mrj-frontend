@@ -100,25 +100,25 @@ function ProductivityStats() {
   else if (activeTab === 'monthly') xAxisKey = 'month';
 
   return (
-    <div className="p-4 border border-gray-200 rounded-lg shadow-sm bg-white">
-      <h1 className="text-2xl font-bold mb-4 text-center">Productivity Statistics</h1>
+    <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm bg-white dark:bg-gray-900">
+      <h1 className="text-2xl font-bold mb-4 text-center dark:text-white">Productivity Statistics</h1>
       {/* Tab Navigation */}
       <div className="flex justify-center mb-4 space-x-2">
         <button
           onClick={() => setActiveTab('daily')}
-          className={`px-4 py-2 rounded ${activeTab === 'daily' ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-800'}`}
+          className={`px-4 py-2 rounded ${activeTab === 'daily' ? 'bg-blue-600 text-white' : 'bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-300'}`}
         >
           Daily
         </button>
         <button
           onClick={() => setActiveTab('weekly')}
-          className={`px-4 py-2 rounded ${activeTab === 'weekly' ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-800'}`}
+          className={`px-4 py-2 rounded ${activeTab === 'weekly' ? 'bg-blue-600 text-white' : 'bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-300'}`}
         >
           Weekly
         </button>
         <button
           onClick={() => setActiveTab('monthly')}
-          className={`px-4 py-2 rounded ${activeTab === 'monthly' ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-800'}`}
+          className={`px-4 py-2 rounded ${activeTab === 'monthly' ? 'bg-blue-600 text-white' : 'bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-300'}`}
         >
           Monthly
         </button>
@@ -126,7 +126,7 @@ function ProductivityStats() {
 
       {/* Chart Section */}
       {loading ? (
-        <p className="text-center">Loading...</p>
+        <p className="text-center dark:text-gray-300">Loading...</p>
       ) : (
         <ResponsiveContainer width="100%" height={400}>
           <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>

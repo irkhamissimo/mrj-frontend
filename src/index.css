@@ -76,4 +76,10 @@
     background-image: url("data:image/svg+xml,%3Csvg width='56' height='56' viewBox='0 0 56 56' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23a08963' stroke-opacity='0.12' stroke-width='1.5'%3E%3Cpath d='M28 0L35 21L56 28L35 35L28 56L21 35L0 28L21 21Z'/%3E%3Ccircle cx='28' cy='28' r='7'/%3E%3C/g%3E%3C/svg%3E");
     background-size: 56px 56px;
   }
+
+  .dark body {
+    background-color: #0f172a;
+    background-image: url("data:image/svg+xml,%3Csvg width='56' height='56' viewBox='0 0 56 56' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23e2d5b7' stroke-opacity='0.08' stroke-width='1'%3E%3Cpath d='M28 0L35 21L56 28L35 35L28 56L21 35L0 28L21 21Z'/%3E%3Ccircle cx='28' cy='28' r='7'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 56px 56px;
+  }
 }

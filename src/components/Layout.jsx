@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { apiCall } from "@/lib/api";
+import { useTheme } from "@/contexts/ThemeContext";
 import LogoutButton from "./LogoutButton";
 
 export default function Layout({ children }) {
   const location = useLocation();
+  const { theme, toggleTheme } = useTheme();
   const [menuItems, setMenuItems] = useState([]);
   const [gamification, setGamification] = useState(null);
 
@@ -46,14 +48,14 @@ export default function Layout({ children }) {
   return (
     <div className="min-h-screen relative pt-8 pb-24">
       {/* Top header with title and logout button */}
-      <header className="fixed top-0 inset-x-0 bg-white shadow-sm z-10">
+      <header className="fixed top-0 inset-x-0 bg-white dark:bg-gray-900 shadow-sm z-10">
         <div className="max-w-2xl mx-auto px-4 py-2 flex justify-between items-center">
           <div className="text-lg font-semibold">
             Mindful Hafidz
           </div>
           <div className="flex items-center gap-3">
             {gamification && (
-              <div className="flex items-center gap-2 text-xs text-gray-500">
+              <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                 <span title={`${gamification.streak}-day streak`}>🔥 {gamification.streak}</span>
                 <span>·</span>
                 <span title="Total points">⭐ {gamification.totalPoints}</span>
@@ -61,6 +63,13 @@ export default function Layout({ children }) {
                 <span title={`Level ${gamification.level + 1}`}>🏅 {gamification.title}</span>
               </div>
             )}
+            <button
+              onClick={toggleTheme}
+              className="text-sm px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+            >
+              {theme === 'light' ? '🌙' : '☀️'}
+            </button>
             <LogoutButton />
           </div>
         </div>
@@ -73,13 +82,13 @@ export default function Layout({ children }) {
 
       {/* Bottom dock (MacOS-style) for menu items */}
       <nav className="fixed bottom-4 inset-x-0 z-20 flex justify-center">
-        <div className="bg-gray-100/80 backdrop-blur-lg rounded-full px-6 py-3 shadow-2xl border border-gray-200 flex space-x-6">
+        <div className="bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-full px-6 py-3 shadow-2xl border border-gray-200 dark:border-gray-700 flex space-x-6">
           {menuItems.map((item) => (
             <Link
               key={item._id}
               to={item.path}
               className={`flex flex-col items-center justify-center text-sm font-medium transition-transform transform hover:scale-110 ${
-                location.pathname === item.path ? "text-primary" : "text-gray-600"
+                location.pathname === item.path ? "text-primary" : "text-gray-600 dark:text-gray-400"
               }`}
             >
               {item.title}
