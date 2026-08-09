@@ -25,19 +25,37 @@ export default function MurajaahPlayer() {
   const [currentEntry, setCurrentEntry] = useState(null);
   const [verifiedMemorizations, setVerifiedMemorizations] = useState([]);
 
-  // Initialize state from localStorage on mount
+  // Initialize session from the server on mount (source of truth across devices)
   useEffect(() => {
     const storedEntry = localStorage.getItem('currentEntry');
-    const storedSession = localStorage.getItem('activeSession');
-
     if (storedEntry) {
       setCurrentEntry(JSON.parse(storedEntry));
     }
-    if (storedSession) {
-      setActiveSession(JSON.parse(storedSession));
-    }
     // completedSessions is fetched fresh from the API so it resets each day
     localStorage.removeItem('completedSessions');
+
+    const loadCurrentSession = async () => {
+      try {
+        const response = await apiCall('/revisions/current');
+        const data = await response.json();
+        if (response.ok && data.session && !data.session.completed) {
+          setActiveSession(data.session);
+          setIsPaused(data.session.isPaused);
+          const now = new Date();
+          const startTime = new Date(data.session.startTime);
+          const pauseDuration = data.session.totalPauseDuration || 0;
+          const elapsed = Math.floor((now - startTime) / 1000) - (pauseDuration * 60);
+          setTimeElapsed(Math.min(1500, Math.max(0, elapsed)));
+        } else {
+          setActiveSession(null);
+          setIsPaused(false);
+        }
+      } catch (error) {
+        console.error('Failed to load current session:', error);
+      }
+    };
+
+    loadCurrentSession();
   }, []);
 
   // Update localStorage whenever currentEntry or activeSession changes
@@ -182,6 +200,14 @@ export default function MurajaahPlayer() {
         setIsPaused(false);
         setTimeElapsed(1500); // Set to max duration when completed
         navigate('/murajaah');
+      } else {
+        // Sync authoritative state from the server
+        setIsPaused(data.session.isPaused);
+        const now = new Date();
+        const startTime = new Date(data.session.startTime);
+        const pauseDuration = data.session.totalPauseDuration || 0;
+        const elapsed = Math.floor((now - startTime) / 1000) - (pauseDuration * 60);
+        setTimeElapsed(Math.min(1500, Math.max(0, elapsed)));
       }
     } catch (error) {
       console.error("Failed to check session status:", error);
@@ -239,7 +265,9 @@ export default function MurajaahPlayer() {
     }
   };
 
-  // Timer effect with session status check
+  // Timer effect: smooth per-second tick while running, plus server polling
+  // so the timer stays in sync across devices (pause/complete elsewhere is
+  // picked up via checkSessionStatus).
   useEffect(() => {
     let interval;
     let statusInterval;
@@ -261,17 +289,13 @@ export default function MurajaahPlayer() {
           return prev + 1;
         });
       }, 1000);
-
-      // Add status check interval
-      statusInterval = setInterval(() => {
-        checkSessionStatus();
-      }, 1000);
-
-      return () => {
-        clearInterval(interval);
-        clearInterval(statusInterval);
-      };
     }
+
+    // Poll the server for authoritative state whether running or paused
+    statusInterval = setInterval(() => {
+      checkSessionStatus();
+    }, 3000);
+
     return () => {
       if (interval) clearInterval(interval);
       if (statusInterval) clearInterval(statusInterval);

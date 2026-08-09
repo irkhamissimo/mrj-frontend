@@ -84,63 +84,39 @@ export default function MemorizationPage() {
     fetchTodayMemorization().finally(() => setInitialLoading(false));
   }, []);
 
-  // Load session state from localStorage on mount
+  // Load the current session from the server (source of truth across devices)
   useEffect(() => {
-    const initializeFromStorage = async () => {
+    const initializeFromServer = async () => {
       try {
-        const storedMemorization = localStorage.getItem('todayMemorization');
-        const storedSessionStartTime = localStorage.getItem('sessionStartTime');
-        const storedIsPaused = localStorage.getItem('isPaused');
-        const storedTimeElapsed = localStorage.getItem('timeElapsed');
-        
-        if (!storedMemorization) return;
-        
-        const parsedMemorization = JSON.parse(storedMemorization);
-        
-        if (parsedMemorization.currentSession?._id) {
-          const response = await apiCall(`/memorizations/sessions/${parsedMemorization.currentSession._id}/status`);
-          const data = await response.json();
-          
-          if (response.ok && !data.session.completed) {
-            setTodayMemorization(prev => {
-              // If fetchTodayMemorization already set the base entry, merge in currentSession
-              if (prev && prev._id === parsedMemorization._id) {
-                return { ...prev, currentSession: data.session };
-              }
-              return { ...parsedMemorization, currentSession: data.session };
-            });
-            
-            setStartSurah(parsedMemorization.surahNumber?.toString());
-            setStartVerse(parsedMemorization.fromVerse?.toString());
-            setEndSurah(parsedMemorization.surahNumber?.toString());
-            setEndVerse(parsedMemorization.toVerse?.toString());
-            setCompletedSessions(parsedMemorization.totalSessionsCompleted || 0);
-            
-            if (storedIsPaused) {
-              setIsPaused(JSON.parse(storedIsPaused));
-            }
-            
-            if (storedTimeElapsed) {
-              setTimeElapsed(parseInt(storedTimeElapsed));
-            }
-            
-            if (storedSessionStartTime) {
-              sessionStartTimeRef.current = parseInt(storedSessionStartTime);
-            }
-          } else {
-            // Clear storage if session is completed or invalid
-            localStorage.removeItem('sessionStartTime');
-            localStorage.removeItem('timeElapsed');
-            localStorage.removeItem('isPaused');
-            localStorage.removeItem('todayMemorization');
-          }
+        const response = await apiCall("/memorizations/current");
+        const data = await response.json();
+        if (response.ok && data.entry) {
+          const entry = data.entry;
+          setTodayMemorization(prev =>
+            prev && prev._id === entry._id
+              ? { ...prev, currentSession: data.session || null }
+              : { ...entry, currentSession: data.session || null }
+          );
+          setStartSurah(entry.surahNumber?.toString());
+          setStartVerse(entry.fromVerse?.toString());
+          setEndSurah(entry.surahNumber?.toString());
+          setEndVerse(entry.toVerse?.toString());
+          setCompletedSessions(entry.totalSessionsCompleted || 0);
+        } else {
+          // No in-progress session today — clear any stale local state
+          setTodayMemorization(null);
+          setTimeElapsed(0);
+          localStorage.removeItem('todayMemorization');
+          localStorage.removeItem('sessionStartTime');
+          localStorage.removeItem('timeElapsed');
+          localStorage.removeItem('isPaused');
         }
       } catch (error) {
-        console.error("Failed to initialize from storage:", error);
+        console.error("Failed to initialize from server:", error);
       }
     };
 
-    initializeFromStorage();
+    initializeFromServer().finally(() => setInitialLoading(false));
   }, []);
 
   // Update localStorage when todayMemorization changes
@@ -234,12 +210,20 @@ export default function MemorizationPage() {
               setCompletedSessions(todayMem.totalSessionsCompleted || 0);
             }
           } else {
-            // Only update if pause state changed
-            if (data.session.isPaused !== isPaused) {
-              setIsPaused(data.session.isPaused);
-              localStorage.setItem('isPaused', JSON.stringify(data.session.isPaused));
+            // Sync authoritative pause state and elapsed time from the server
+            // so a pause/resume on another device is reflected here.
+            setIsPaused(data.session.isPaused);
+            localStorage.setItem('isPaused', JSON.stringify(data.session.isPaused));
+
+            if (!data.session.isPaused) {
+              const startTime = new Date(data.session.startTime).getTime();
+              sessionStartTimeRef.current = startTime;
+              localStorage.setItem('sessionStartTime', startTime.toString());
+              const pauseDuration = (data.session.totalPauseDuration || 0) * 1000;
+              const elapsedSeconds = Math.floor((Date.now() - startTime - pauseDuration) / 1000);
+              setTimeElapsed(Math.min(1500, Math.max(0, elapsedSeconds)));
             }
-            
+
             // Update session data if needed
             setTodayMemorization(prev => ({
               ...prev,

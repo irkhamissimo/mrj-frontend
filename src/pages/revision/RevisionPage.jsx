@@ -96,31 +96,90 @@ export default function RevisionPage() {
     fetchRevisionSessions();
   }, [entryId]);
 
-  // Timer effect: update timeElapsed every second based on shared localStorage.
+  // Timer effect: tick every second while running, and poll the server for
+  // authoritative pause/elapsed state so revisions stay in sync across devices.
   useEffect(() => {
     if (!activeSession) return;
 
-    const intervalId = setInterval(() => {
-      const stored = localStorage.getItem("activeRevisionSession");
-      if (stored) {
-        const s = JSON.parse(stored);
-        let effectiveTime;
-        if (s.paused) {
-          effectiveTime = s.elapsedBeforePause;
-        } else {
-          effectiveTime =
-            Math.floor((Date.now() - s.startTime) / 1000) + s.elapsedBeforePause;
-        }
-        setTimeElapsed(effectiveTime);
-        if (effectiveTime >= s.sessionDuration) {
-          clearInterval(intervalId);
-          handleSessionComplete();
-        }
-      }
-    }, 1000);
+    let intervalId;
+    let statusIntervalId;
 
-    return () => clearInterval(intervalId);
-  }, [activeSession]);
+    const computeElapsed = (session, now = Date.now()) => {
+      const startTime = new Date(session.startTime).getTime();
+      const pauseMs = (session.totalPauseDuration || 0) * 60 * 1000;
+      const elapsedSec = Math.floor((now - startTime - pauseMs) / 1000);
+      return Math.max(0, elapsedSec);
+    };
+
+    const syncFromServer = async () => {
+      try {
+        const response = await apiCall(
+          `/memorizations/revisions/${activeSession._id}/status`
+        );
+        const data = await response.json();
+        if (response.ok && data.session) {
+          if (data.session.completed) {
+            clearInterval(intervalId);
+            clearInterval(statusIntervalId);
+            setCompletedSessions(prev => prev + 1);
+            setActiveSession(null);
+            setIsPaused(false);
+            setTimeElapsed(0);
+            setSessionDuration(0);
+            localStorage.removeItem("activeRevisionSession");
+            return;
+          }
+          const elapsed = computeElapsed(data.session);
+          setTimeElapsed(elapsed);
+          setSessionDuration(data.session.duration * 60);
+          setIsPaused(data.session.isPaused);
+
+          // Cache locally so the timer can keep ticking between polls
+          const cached = {
+            revisionSessionId: data.session._id,
+            paused: data.session.isPaused,
+            elapsedBeforePause: elapsed,
+            startTime: null,
+            sessionDuration: data.session.duration * 60,
+          };
+          localStorage.setItem("activeRevisionSession", JSON.stringify(cached));
+        }
+      } catch (error) {
+        console.error("Failed to sync revision status:", error);
+      }
+    };
+
+    syncFromServer();
+    statusIntervalId = setInterval(syncFromServer, 3000);
+
+    // Per-second visual tick while running
+    if (!isPaused) {
+      intervalId = setInterval(() => {
+        const stored = localStorage.getItem("activeRevisionSession");
+        if (stored) {
+          const s = JSON.parse(stored);
+          let effectiveTime;
+          if (s.paused) {
+            effectiveTime = s.elapsedBeforePause;
+          } else if (s.startTime) {
+            effectiveTime =
+              Math.floor((Date.now() - s.startTime) / 1000) + s.elapsedBeforePause;
+          } else {
+            effectiveTime = s.elapsedBeforePause + 1;
+          }
+          setTimeElapsed(effectiveTime);
+          if (effectiveTime >= s.sessionDuration) {
+            handleSessionComplete();
+          }
+        }
+      }, 1000);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      if (statusIntervalId) clearInterval(statusIntervalId);
+    };
+  }, [activeSession, isPaused]);
 
   // Listen for localStorage changes (i.e. across tabs)
   useEffect(() => {
