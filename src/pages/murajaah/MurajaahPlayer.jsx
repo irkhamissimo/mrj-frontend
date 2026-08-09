@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiCall } from "@/lib/api";
-import { data } from "autoprefixer";
 
 export default function MurajaahPlayer() {
   const navigate = useNavigate();
@@ -30,7 +29,6 @@ export default function MurajaahPlayer() {
   useEffect(() => {
     const storedEntry = localStorage.getItem('currentEntry');
     const storedSession = localStorage.getItem('activeSession');
-    const storedCompletedSessions = localStorage.getItem('completedSessions');
 
     if (storedEntry) {
       setCurrentEntry(JSON.parse(storedEntry));
@@ -38,12 +36,11 @@ export default function MurajaahPlayer() {
     if (storedSession) {
       setActiveSession(JSON.parse(storedSession));
     }
-    if (storedCompletedSessions) {
-      setCompletedSessions(parseInt(storedCompletedSessions, 10));
-    }
+    // completedSessions is fetched fresh from the API so it resets each day
+    localStorage.removeItem('completedSessions');
   }, []);
 
-  // Update localStorage whenever currentEntry, activeSession, or completedSessions changes
+  // Update localStorage whenever currentEntry or activeSession changes
   useEffect(() => {
     if (currentEntry) {
       localStorage.setItem('currentEntry', JSON.stringify(currentEntry));
@@ -55,10 +52,6 @@ export default function MurajaahPlayer() {
       localStorage.setItem('activeSession', JSON.stringify(activeSession));
     }
   }, [activeSession]);
-
-  useEffect(() => {
-    localStorage.setItem('completedSessions', completedSessions);
-  }, [completedSessions]);
 
   // Handle storage changes from other tabs
   const handleStorageChange = (e) => {
@@ -73,12 +66,6 @@ export default function MurajaahPlayer() {
         setCurrentEntry(JSON.parse(e.newValue));
       } else {
         setCurrentEntry(null);
-      }
-    } else if (e.key === 'completedSessions') {
-      if (e.newValue) {
-        setCompletedSessions(parseInt(e.newValue, 10));
-      } else {
-        setCompletedSessions(0);
       }
     }
   };
@@ -343,22 +330,6 @@ export default function MurajaahPlayer() {
       }
     }
   }, [startVerse, startSurah, endSurah]);
-
-  // add storage event listener for cross-tab synchronization
-  useEffect(() => {
-    const handleStorageChange = (e) => {
-      if (e.key === 'activeSession') {
-        if (e.newValue) {
-          setActiveSession(JSON.parse(e.newValue));
-        } else {
-          setActiveSession(null);
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
 
   return (
     <Card className="max-w-2xl mx-auto">
