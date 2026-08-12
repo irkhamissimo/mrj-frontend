@@ -159,6 +159,7 @@ export default function MurajaahPage() {
         const data = await response.json();
         if (response.ok && data.session) {
           setActiveSession(data.session);
+          setVerifiedMemorizations(data.verifiedMemorizations || []);
           if (data.session.completed) {
             setActiveSession(null);
             setElapsedTime(0);
