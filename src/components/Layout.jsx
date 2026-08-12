@@ -81,13 +81,13 @@ export default function Layout({ children }) {
       </main>
 
       {/* Bottom dock (MacOS-style) for menu items */}
-      <nav className="fixed bottom-4 inset-x-0 z-20 flex justify-center">
-        <div className="bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-full px-6 py-3 shadow-2xl border border-gray-200 dark:border-gray-700 flex space-x-6">
+      <nav className="fixed bottom-4 inset-x-0 z-20 flex justify-center px-3">
+        <div className="w-full max-w-md bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-full py-2.5 px-3 shadow-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-around gap-1 sm:gap-2">
           {menuItems.map((item) => (
             <Link
               key={item._id}
               to={item.path}
-              className={`flex flex-col items-center justify-center text-sm font-medium transition-transform transform hover:scale-110 ${
+              className={`flex-1 flex flex-col items-center justify-center py-1 text-xs sm:text-sm font-medium whitespace-nowrap transition-transform transform hover:scale-110 ${
                 location.pathname === item.path ? "text-primary" : "text-gray-600 dark:text-gray-400"
               }`}
             >
