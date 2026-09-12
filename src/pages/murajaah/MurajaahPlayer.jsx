@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Circle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, computeElapsedSeconds } from "@/lib/utils";
 import { apiCall } from "@/lib/api";
 
 export default function MurajaahPlayer() {
@@ -41,10 +41,7 @@ export default function MurajaahPlayer() {
         if (response.ok && data.session && !data.session.completed) {
           setActiveSession(data.session);
           setIsPaused(data.session.isPaused);
-          const now = new Date();
-          const startTime = new Date(data.session.startTime);
-          const pauseDuration = data.session.totalPauseDuration || 0;
-          const elapsed = Math.floor((now - startTime) / 1000) - (pauseDuration * 60);
+          const elapsed = computeElapsedSeconds(data.session);
           setTimeElapsed(Math.min(1500, Math.max(0, elapsed)));
         } else {
           setActiveSession(null);
@@ -203,10 +200,7 @@ export default function MurajaahPlayer() {
       } else {
         // Sync authoritative state from the server
         setIsPaused(data.session.isPaused);
-        const now = new Date();
-        const startTime = new Date(data.session.startTime);
-        const pauseDuration = data.session.totalPauseDuration || 0;
-        const elapsed = Math.floor((now - startTime) / 1000) - (pauseDuration * 60);
+        const elapsed = computeElapsedSeconds(data.session);
         setTimeElapsed(Math.min(1500, Math.max(0, elapsed)));
       }
     } catch (error) {
@@ -257,7 +251,7 @@ export default function MurajaahPlayer() {
 
       if (response.ok) {
         const data = await response.json();
-        setIsPaused(!isPaused);
+        setIsPaused(data.session.isPaused);
         setActiveSession(data.session);
       }
     } catch (error) {

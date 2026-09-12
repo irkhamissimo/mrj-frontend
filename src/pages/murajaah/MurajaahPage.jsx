@@ -8,7 +8,7 @@ import {
   Circle,
   Pause,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, computeElapsedSeconds } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { apiCall } from "@/lib/api";
 import {
@@ -164,11 +164,8 @@ export default function MurajaahPage() {
             setActiveSession(null);
             setElapsedTime(0);
           } else {
-            const startTime = new Date(data.session.startTime);
-            const now = new Date();
-            const elapsed = Math.floor((now - startTime) / 1000);
-            const pauseDuration = (data.session.totalPauseDuration || 0) * 60;
-            setElapsedTime(Math.min(1500, Math.max(0, elapsed - pauseDuration)));
+            const elapsed = computeElapsedSeconds(data.session);
+            setElapsedTime(Math.min(1500, Math.max(0, elapsed)));
             setIsPaused(data.session.isPaused);
           }
         } else {
@@ -259,12 +256,8 @@ export default function MurajaahPage() {
           setCompletedSessions(sessionsData.totalSessionsCompleted || 0);
         } else {
           // Calculate elapsed time from the server's authoritative data
-          const startTime = new Date(data.session.startTime);
-          const now = new Date();
-          const elapsed = Math.floor((now - startTime) / 1000);
-          const pauseDuration = (data.session.totalPauseDuration || 0) * 60;
-          const adjustedElapsed = Math.floor(Math.max(0, elapsed - pauseDuration));
-          setElapsedTime(Math.min(1500, adjustedElapsed));
+          const elapsed = computeElapsedSeconds(data.session);
+          setElapsedTime(Math.min(1500, Math.max(0, elapsed)));
           setIsPaused(data.session.isPaused);
         }
       } catch (error) {
