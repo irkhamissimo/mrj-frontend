@@ -24,9 +24,19 @@ export default function ZiyadahPage() {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="memorization" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="memorization">Hafalan Baru</TabsTrigger>
-            <TabsTrigger value="revisions">Hafalan Selesai</TabsTrigger>
+          <TabsList className="grid w-full h-auto grid-cols-2 gap-1 mb-4 p-1">
+            <TabsTrigger
+              value="memorization"
+              className="text-xs sm:text-sm px-2 py-1.5 whitespace-normal"
+            >
+              Hafalan Baru
+            </TabsTrigger>
+            <TabsTrigger
+              value="revisions"
+              className="text-xs sm:text-sm px-2 py-1.5 whitespace-normal"
+            >
+              Hafalan Selesai
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="memorization">
