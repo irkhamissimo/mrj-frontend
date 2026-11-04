@@ -35,7 +35,7 @@ export default function RegisterPage() {
       const data = await response.json();
       if (response.ok) {
         // On successful registration, store tokens if returned and navigate to protected route.
-        localStorage.setItem("accessToken", data.accessToken);
+        sessionStorage.setItem("accessToken", data.accessToken);
         localStorage.setItem("refreshToken", data.refreshToken);
         navigate("/ziyadah");
       } else {
@@ -121,4 +121,4 @@ export default function RegisterPage() {
       </div>
     </div>
   );
-} 
+}

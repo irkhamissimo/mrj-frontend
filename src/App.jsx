@@ -1,19 +1,22 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import LoginPage from "./pages/auth/LoginPage";
-import RevisionPage from "./pages/revision/RevisionPage";
-import RevisionsListPage from "./pages/revision/RevisionsListPage";
 import PrivateRoute from "./components/PrivateRoute";
 import Layout from "./components/Layout";
-import VaultPage from "./pages/vault/VaultPage";
-import MurajaahPage from "./pages/murajaah/MurajaahPage";
-import MurajaahPlayer from "./pages/murajaah/MurajaahPlayer";
-import ZiyadahPage from "./pages/ziyadah/ZiyadahPage";
-import ProductivityStats from "./pages/stats/ProductivityStats";
-import LeaderboardPage from "./pages/gamification/LeaderboardPage";
-import RegisterPage from "./pages/auth/RegisterPage";
+
+const LoginPage = lazy(() => import("./pages/auth/LoginPage"));
+const RegisterPage = lazy(() => import("./pages/auth/RegisterPage"));
+const RevisionPage = lazy(() => import("./pages/revision/RevisionPage"));
+const RevisionsListPage = lazy(() => import("./pages/revision/RevisionsListPage"));
+const VaultPage = lazy(() => import("./pages/vault/VaultPage"));
+const MurajaahPage = lazy(() => import("./pages/murajaah/MurajaahPage"));
+const MurajaahPlayer = lazy(() => import("./pages/murajaah/MurajaahPlayer"));
+const ZiyadahPage = lazy(() => import("./pages/ziyadah/ZiyadahPage"));
+const ProductivityStats = lazy(() => import("./pages/stats/ProductivityStats"));
+const LeaderboardPage = lazy(() => import("./pages/gamification/LeaderboardPage"));
 function App() {
   return (
     <Router>
+      <Suspense fallback={<div className="min-h-screen grid place-items-center">Loading…</div>}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
@@ -106,8 +109,9 @@ function App() {
           }
         />
       </Routes>
+      </Suspense>
     </Router>
   );
 }
 
-export default App; 
+export default App;

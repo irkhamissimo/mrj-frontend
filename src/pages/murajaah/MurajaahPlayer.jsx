@@ -305,38 +305,29 @@ export default function MurajaahPlayer() {
   // Get available verses for selected surah
   const getAvailableVerses = (surahNumber) => {
     const surah = memorizedData.bySurah.find(s => s.surahNumber === surahNumber);
-    if (!surah || !surah.verses) return [];
-    
-    // Parse verse range from string (e.g., "1 - 7")
-    const [start, end] = surah.verses.split(" - ").map(Number);
-    
-    // Generate array of available verses
-    const allVerses = [];
-    for (let i = start; i <= end; i++) {
-      allVerses.push(i);
-    }
-    return allVerses;
+    if (!surah) return [];
+    const ranges = surah.ranges?.length
+      ? surah.ranges
+      : [surah.verses.split(" - ").map(Number)].map(([fromVerse, toVerse]) => ({ fromVerse, toVerse }));
+    return ranges.flatMap((range) =>
+      Array.from({ length: range.toVerse - range.fromVerse + 1 }, (_, index) => range.fromVerse + index)
+    );
   };
 
   // Get available end verses for selected surah and start verse
   const getAvailableEndVerses = (surahNumber, startVerse) => {
     const surah = memorizedData.bySurah.find(s => s.surahNumber === surahNumber);
-    if (!surah || !surah.verses) return [];
-    
-    // Parse verse range from string (e.g., "1 - 7")
-    const [start, end] = surah.verses.split(" - ").map(Number);
-    
-    // If start verse is within range, return all verses from start verse to end
+    if (!surah) return [];
+    const ranges = surah.ranges?.length
+      ? surah.ranges
+      : [surah.verses.split(" - ").map(Number)].map(([fromVerse, toVerse]) => ({ fromVerse, toVerse }));
     const startVerseNum = parseInt(startVerse);
-    if (startVerseNum >= start && startVerseNum <= end) {
-      const endVerses = [];
-      for (let i = startVerseNum; i <= end; i++) {
-        endVerses.push(i);
-      }
-      return endVerses;
-    }
-    
-    return [];
+    const selectedRange = ranges.find(
+      (range) => startVerseNum >= range.fromVerse && startVerseNum <= range.toVerse
+    );
+    return selectedRange
+      ? Array.from({ length: selectedRange.toVerse - startVerseNum + 1 }, (_, index) => startVerseNum + index)
+      : [];
   };
 
   // Update end verse options when start verse changes
@@ -517,4 +508,4 @@ export default function MurajaahPlayer() {
       </CardContent>
     </Card>
   );
-} 
+}

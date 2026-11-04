@@ -1,6 +1,26 @@
 import { API_BASE_URL } from '@/config';
 
+let refreshPromise = null;
+
+export const clearAuth = () => {
+  sessionStorage.removeItem("accessToken");
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("refreshToken");
+};
+
+export const getAccessToken = () => {
+  const token = sessionStorage.getItem("accessToken") || localStorage.getItem("accessToken");
+  if (token && localStorage.getItem("accessToken")) {
+    sessionStorage.setItem("accessToken", token);
+    localStorage.removeItem("accessToken");
+  }
+  return token;
+};
+
 async function refreshAccessToken() {
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
   try {
     const refreshToken = localStorage.getItem("refreshToken");
     if (!refreshToken) {
@@ -20,15 +40,19 @@ async function refreshAccessToken() {
     }
 
     const data = await response.json();
-    localStorage.setItem("accessToken", data.accessToken);
+    sessionStorage.setItem("accessToken", data.accessToken);
     localStorage.setItem("refreshToken", data.refreshToken);
     return data.accessToken;
   } catch (error) {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
+    clearAuth();
     window.location.href = "/login";
     throw error;
+  } finally {
+    refreshPromise = null;
   }
+  })();
+
+  return refreshPromise;
 }
 
 export const apiCall = async (endpoint, options = {}) => {
@@ -50,7 +74,7 @@ export const apiCall = async (endpoint, options = {}) => {
     },
   };
 
-  const accessToken = localStorage.getItem("accessToken");
+  const accessToken = getAccessToken();
   
   // Add authorization header if token exists
   if (accessToken) {
@@ -93,4 +117,13 @@ export const apiCall = async (endpoint, options = {}) => {
     }
     throw error;
   }
-}; 
+};
+
+export async function responseError(response, fallback = "Request failed") {
+  try {
+    const data = await response.clone().json();
+    return data.error || data.message || fallback;
+  } catch (_) {
+    return fallback;
+  }
+}

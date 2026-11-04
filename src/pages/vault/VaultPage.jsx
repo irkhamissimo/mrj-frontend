@@ -7,6 +7,7 @@ import { apiCall } from "@/lib/api";
 export default function VaultPage() {
   const [vaultEntries, setVaultEntries] = useState([]);
   const [selectedEntry, setSelectedEntry] = useState(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const fetchVaultEntries = async () => {
@@ -18,9 +19,10 @@ export default function VaultPage() {
           },
         });
         const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Failed to load submissions");
         setVaultEntries(data);
       } catch (error) {
-        console.error("Failed to fetch vault entries:", error);
+        setError(error.message);
       }
     };
 
@@ -28,6 +30,7 @@ export default function VaultPage() {
   }, []);
 
   const handleVerify = async (vaultId) => {
+    setError("");
     try {
       const response = await apiCall(`/vault/${vaultId}/verify`, {
         method: "POST",
@@ -44,9 +47,12 @@ export default function VaultPage() {
         // Remove the verified entry from the list
         setVaultEntries(vaultEntries.filter(entry => entry._id !== vaultId));
         setSelectedEntry(null);
+      } else {
+        const data = await response.json();
+        setError(data.error || "Verification failed");
       }
     } catch (error) {
-      console.error("Failed to verify entry:", error);
+      setError(error.message);
     }
   };
 
@@ -58,6 +64,11 @@ export default function VaultPage() {
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {error && (
+          <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive" role="alert">
+            {error}
+          </div>
+        )}
         {vaultEntries.map((entry) => (
           <div key={entry._id} className="flex items-center justify-between p-4 border rounded-lg">
             <div className="flex items-center gap-4">
@@ -73,10 +84,10 @@ export default function VaultPage() {
             </div>
             <Button
               variant="secondary"
-              disabled={selectedEntry !== entry._id}
+              disabled={!entry.canVerify || selectedEntry !== entry._id}
               onClick={() => handleVerify(entry._id)}
             >
-              Tandai Sudah Disetor
+              {entry.canVerify ? "Tandai Sudah Disetor" : "Menunggu guru"}
             </Button>
           </div>
         ))}
@@ -88,4 +99,4 @@ export default function VaultPage() {
       </CardContent>
     </Card>
   );
-} 
+}

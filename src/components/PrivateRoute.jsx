@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
 
 export default function PrivateRoute({ children }) {
-  const accessToken = localStorage.getItem("accessToken");
+  const accessToken = sessionStorage.getItem("accessToken") || localStorage.getItem("accessToken");
   const refreshToken = localStorage.getItem("refreshToken");
   
   if (!accessToken && !refreshToken) {
@@ -10,4 +10,4 @@ export default function PrivateRoute({ children }) {
   }
 
   return children;
-} 
+}

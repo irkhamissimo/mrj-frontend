@@ -34,7 +34,7 @@ export default function LoginPage() {
 
       const data = await response.json();
       if (response.ok) {
-        localStorage.setItem("accessToken", data.accessToken);
+        sessionStorage.setItem("accessToken", data.accessToken);
         localStorage.setItem("refreshToken", data.refreshToken);
         navigate("/ziyadah");
       } else {
@@ -110,4 +110,4 @@ export default function LoginPage() {
       </div>
     </div>
   );
-} 
+}

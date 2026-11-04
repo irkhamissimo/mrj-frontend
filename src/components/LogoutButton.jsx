@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiCall } from "@/lib/api";
+import { apiCall, clearAuth } from "@/lib/api";
 
 /**
  * LogoutButton component
@@ -10,11 +10,17 @@ export default function LogoutButton() {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
+    const refreshToken = localStorage.getItem("refreshToken");
     try {
-      await apiCall("/logout", { method: "POST" });
-      navigate("/login");
+      await apiCall("/users/logout", {
+        method: "POST",
+        body: JSON.stringify({ refreshToken }),
+      });
     } catch (error) {
       console.error("Logout failed:", error);
+    } finally {
+      clearAuth();
+      navigate("/login", { replace: true });
     }
   };
 
@@ -26,4 +32,4 @@ export default function LogoutButton() {
       Logout
     </button>
   );
-} 
+}

@@ -109,6 +109,27 @@ export default function MurajaahPage() {
   const [selectedJuz, setSelectedJuz] = useState("");
   const [showSurahDialog, setShowSurahDialog] = useState(false);
   const [showJuzDialog, setShowJuzDialog] = useState(false);
+  const [dueReviews, setDueReviews] = useState([]);
+  const [pendingFeedback, setPendingFeedback] = useState(null);
+  const [reviewMessage, setReviewMessage] = useState("");
+  const [reviewError, setReviewError] = useState("");
+
+  const loadReviewQueue = async () => {
+    try {
+      const [dueResponse, feedbackResponse] = await Promise.all([
+        apiCall("/revisions/due"),
+        apiCall("/revisions/feedback/pending"),
+      ]);
+      const dueData = await dueResponse.json();
+      const feedbackData = await feedbackResponse.json();
+      if (!dueResponse.ok) throw new Error(dueData.error || "Failed to load review queue");
+      if (!feedbackResponse.ok) throw new Error(feedbackData.error || "Failed to load feedback");
+      setDueReviews(dueData.items || []);
+      setPendingFeedback(feedbackData.session || null);
+    } catch (error) {
+      setReviewError(error.message);
+    }
+  };
 
   // Fetch surahs for the select dropdown
   useEffect(() => {
@@ -149,6 +170,7 @@ export default function MurajaahPage() {
     };
 
     fetchData();
+    loadReviewQueue();
   }, []);
 
   // Load session state from the server on mount (source of truth across devices)
@@ -254,6 +276,7 @@ export default function MurajaahPage() {
           const sessionsResponse = await apiCall("/revisions/sessions");
           const sessionsData = await sessionsResponse.json();
           setCompletedSessions(sessionsData.totalSessionsCompleted || 0);
+          await loadReviewQueue();
         } else {
           // Calculate elapsed time from the server's authoritative data
           const elapsed = computeElapsedSeconds(data.session);
@@ -279,6 +302,7 @@ export default function MurajaahPage() {
   }, [activeSession]);
 
   const handleStartMurajaah = async (type, identifier) => {
+    setReviewError("");
     try {
       // Start a new revision session
       const response = await apiCall("/revisions/start", {
@@ -305,9 +329,37 @@ export default function MurajaahPage() {
         localStorage.setItem("verifiedMemorizations", JSON.stringify(data.verifiedMemorizations));
         localStorage.setItem("elapsedTime", "0");
         localStorage.setItem("isPaused", "false");
+      } else {
+        const data = await response.json();
+        setReviewError(data.error || "Failed to start review");
       }
     } catch (error) {
       console.error("Failed to start revision:", error);
+    }
+  };
+
+  const handleReviewFeedback = async (rating) => {
+    if (!pendingFeedback || loading) return;
+    setLoading(true);
+    setReviewError("");
+    try {
+      const response = await apiCall(`/revisions/${pendingFeedback._id}/feedback`, {
+        method: "POST",
+        body: JSON.stringify({ rating }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to save feedback");
+      setPendingFeedback(null);
+      setReviewMessage(
+        data.nextReviewAt
+          ? `Review saved. Next review: ${new Date(data.nextReviewAt).toLocaleDateString("id-ID")}.`
+          : "Review saved."
+      );
+      await loadReviewQueue();
+    } catch (error) {
+      setReviewError(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -373,7 +425,10 @@ export default function MurajaahPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ verses }),
+        body: JSON.stringify({
+          fromVerse: verses.fromVerse,
+          toVerse: verses.toVerse,
+        }),
       });
 
       if (response.ok) {
@@ -454,7 +509,76 @@ export default function MurajaahPage() {
         />
       </CardHeader>
 
-      <CardContent>
+      <CardContent className="space-y-6">
+        {reviewError && (
+          <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive" role="alert">
+            {reviewError}
+          </div>
+        )}
+        {reviewMessage && (
+          <div className="rounded-md bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-300">
+            {reviewMessage}
+          </div>
+        )}
+
+        {pendingFeedback && (
+          <Card className="border-amber-500/50 bg-amber-500/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">How well did you remember it?</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Your answer schedules the next review. 1 means difficult; 5 means easy.
+              </p>
+              <div className="grid grid-cols-5 gap-2">
+                {[1, 2, 3, 4, 5].map((rating) => (
+                  <Button
+                    key={rating}
+                    variant={rating >= 4 ? "default" : "outline"}
+                    disabled={loading}
+                    onClick={() => handleReviewFeedback(rating)}
+                    aria-label={`Rate recall ${rating} out of 5`}
+                  >
+                    {rating}
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <section className="space-y-3" aria-labelledby="review-today-title">
+          <div className="flex items-center justify-between">
+            <h2 id="review-today-title" className="text-lg font-semibold">Review today</h2>
+            <span className="text-sm text-muted-foreground">{dueReviews.length} due</span>
+          </div>
+          {dueReviews.length === 0 ? (
+            <p className="rounded-md border p-4 text-sm text-muted-foreground">
+              You are caught up. Newly memorized material will appear here when it is due.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {dueReviews.map((item) => (
+                <div key={item.surahNumber} className="flex items-center justify-between gap-4 rounded-md border p-3">
+                  <div>
+                    <p className="font-medium">{item.surahEnglishName || item.surahName}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Ayat {item.ranges.map((range) => `${range.fromVerse}-${range.toVerse}`).join(", ")}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    disabled={Boolean(activeSession) || Boolean(pendingFeedback)}
+                    onClick={() => handleStartMurajaah("surah", item.surahNumber)}
+                  >
+                    Review
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
         <Tabs defaultValue="surah" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="surah">Surah</TabsTrigger>

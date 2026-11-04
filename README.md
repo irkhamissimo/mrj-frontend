@@ -12,6 +12,7 @@ Mindful Hafidz is a web application to help users memorize, submit, and revise (
 - **Ziyadah (Hafalan Baru):** Catat, kelola, dan pantau progres hafalan baru setiap hari.
 - **Vault (Hafalan Belum Disetor):** Daftar hafalan yang belum diverifikasi/setor.
 - **Murajaah:** Jadwalkan dan lakukan sesi revisi hafalan dengan timer dan indikator progres.
+- **Review Hari Ini:** Prioritaskan hafalan jatuh tempo berdasarkan penilaian ingatan 1–5.
 - **Revisi Hafalan:** Lihat daftar hafalan yang sudah selesai dan lakukan revisi bertahap.
 - **Statistik Produktivitas:** Pantau statistik harian, mingguan, dan bulanan dalam bentuk grafik.
 - **Autentikasi:** Registrasi dan login untuk keamanan data hafalan.
@@ -20,6 +21,7 @@ Mindful Hafidz is a web application to help users memorize, submit, and revise (
 - **Ziyadah (New Memorization):** Record, manage, and track new daily memorization progress.
 - **Vault (Unsubmitted Memorization):** List of memorization entries pending verification/submission.
 - **Murajaah (Revision):** Schedule and perform revision sessions with timer and progress indicators.
+- **Review Today:** Prioritize due memorization using a 1–5 recall rating.
 - **Revision:** View completed memorization and perform step-by-step revision.
 - **Productivity Statistics:** Monitor daily, weekly, and monthly stats with charts.
 - **Authentication:** Register and login for secure memorization data.
@@ -104,4 +106,4 @@ Mindful Hafidz is a web application to help users memorize, submit, and revise (
 Aplikasi ini dikembangkan untuk keperluan edukasi dan non-komersial.
 
 ## 🇬🇧 License
-This app is developed for educational and non-commercial purposes. 
+This app is developed for educational and non-commercial purposes.
