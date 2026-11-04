@@ -7,6 +7,7 @@ import {
   Play,
   Circle,
   Pause,
+  Trash2,
 } from "lucide-react";
 import { cn, computeElapsedSeconds } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
@@ -301,6 +302,18 @@ export default function MurajaahPage() {
     };
   }, [activeSession]);
 
+  // Keep the visible timer smooth without increasing server polling frequency.
+  useEffect(() => {
+    if (!activeSession || isPaused) return undefined;
+    const updateTimer = () => {
+      const durationSeconds = (activeSession.duration || 25) * 60;
+      setElapsedTime(Math.min(durationSeconds, Math.max(0, computeElapsedSeconds(activeSession))));
+    };
+    updateTimer();
+    const timerId = setInterval(updateTimer, 1000);
+    return () => clearInterval(timerId);
+  }, [activeSession, isPaused]);
+
   const handleStartMurajaah = async (type, identifier) => {
     setReviewError("");
     try {
@@ -439,6 +452,34 @@ export default function MurajaahPage() {
       }
     } catch (error) {
       console.error("Failed to update verses:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteRange = async (surahNumber, range) => {
+    const label = `Ayat ${range.fromVerse}-${range.toVerse}`;
+    if (!window.confirm(`Delete ${label} from memorized Surah ${surahNumber}?`)) return;
+    setLoading(true);
+    setReviewError("");
+    try {
+      const response = await apiCall(`/memorized/surah/${surahNumber}/range`, {
+        method: "DELETE",
+        body: JSON.stringify(range),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not delete this range");
+      const [memResponse, dueResponse] = await Promise.all([
+        apiCall("/memorized"),
+        apiCall("/revisions/due"),
+      ]);
+      const memData = await memResponse.json();
+      const dueData = await dueResponse.json();
+      if (!memResponse.ok || !dueResponse.ok) throw new Error("Range deleted, but refreshing the list failed");
+      setMemorizedData(memData);
+      setDueReviews(dueData.items || []);
+    } catch (error) {
+      setReviewError(error.message);
     } finally {
       setLoading(false);
     }
@@ -598,7 +639,23 @@ export default function MurajaahPage() {
                 >
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">
-                      {surah.surahEnglishName}: {surah.verses}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span>{surah.surahEnglishName}</span>
+                        {(surah.ranges || []).map((range) => (
+                          <span key={`${range.fromVerse}-${range.toVerse}`} className="inline-flex items-center gap-1 rounded border px-2 py-1">
+                            Ayat {range.fromVerse}-{range.toVerse}
+                            <button
+                              type="button"
+                              className="rounded p-1 text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                              aria-label={`Delete Ayat ${range.fromVerse}-${range.toVerse} from ${surah.surahEnglishName}`}
+                              disabled={loading || Boolean(activeSession)}
+                              onClick={() => handleDeleteRange(surah.surahNumber, range)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
                     </CardTitle>
                     <Button
                       variant="ghost"
