@@ -538,29 +538,14 @@ export default function MurajaahPage() {
                     "transition-colors duration-200"
                   )}
                 >
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span>{surah.surahEnglishName}</span>
-                        {(surah.ranges || []).map((range) => (
-                          <span key={`${range.fromVerse}-${range.toVerse}`} className="inline-flex items-center gap-1 rounded border px-2 py-1">
-                            Ayat {range.fromVerse}-{range.toVerse}
-                            <button
-                              type="button"
-                              className="rounded p-1 text-destructive hover:bg-destructive/10 disabled:opacity-50"
-                              aria-label={`Delete Ayat ${range.fromVerse}-${range.toVerse} from ${surah.surahEnglishName}`}
-                              disabled={loading || Boolean(activeSession)}
-                              onClick={() => handleDeleteRange(surah.surahNumber, range)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </span>
-                        ))}
-                      </div>
+                  <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 pb-3">
+                    <CardTitle className="min-w-0 flex-1 break-words text-sm font-medium leading-snug">
+                      {surah.surahEnglishName || surah.surahName}
                     </CardTitle>
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="shrink-0"
                       onClick={async () => {
                         if (activeSession && isActive) {
                           // Call pauseRevision endpoint
@@ -589,6 +574,27 @@ export default function MurajaahPage() {
                       )}
                     </Button>
                   </CardHeader>
+                  <CardContent className="space-y-2">
+                    {(surah.ranges || []).map((range) => (
+                      <div
+                        key={`${range.fromVerse}-${range.toVerse}`}
+                        className="flex items-center justify-between gap-3 rounded-md border py-1 pl-3 pr-1"
+                      >
+                        <span className="min-w-0 flex-1 break-words text-sm">
+                          Ayat {range.fromVerse}-{range.toVerse}
+                        </span>
+                        <button
+                          type="button"
+                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                          aria-label={`Delete Ayat ${range.fromVerse}-${range.toVerse} from ${surah.surahEnglishName || surah.surahName}`}
+                          disabled={loading || Boolean(activeSession)}
+                          onClick={() => handleDeleteRange(surah.surahNumber, range)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </CardContent>
                 </Card>
               );
             })}
