@@ -110,27 +110,8 @@ export default function MurajaahPage() {
   const [selectedJuz, setSelectedJuz] = useState("");
   const [showSurahDialog, setShowSurahDialog] = useState(false);
   const [showJuzDialog, setShowJuzDialog] = useState(false);
-  const [dueReviews, setDueReviews] = useState([]);
-  const [pendingFeedback, setPendingFeedback] = useState(null);
-  const [reviewMessage, setReviewMessage] = useState("");
+  const [duration, setDuration] = useState("25");
   const [reviewError, setReviewError] = useState("");
-
-  const loadReviewQueue = async () => {
-    try {
-      const [dueResponse, feedbackResponse] = await Promise.all([
-        apiCall("/revisions/due"),
-        apiCall("/revisions/feedback/pending"),
-      ]);
-      const dueData = await dueResponse.json();
-      const feedbackData = await feedbackResponse.json();
-      if (!dueResponse.ok) throw new Error(dueData.error || "Failed to load review queue");
-      if (!feedbackResponse.ok) throw new Error(feedbackData.error || "Failed to load feedback");
-      setDueReviews(dueData.items || []);
-      setPendingFeedback(feedbackData.session || null);
-    } catch (error) {
-      setReviewError(error.message);
-    }
-  };
 
   // Fetch surahs for the select dropdown
   useEffect(() => {
@@ -171,7 +152,6 @@ export default function MurajaahPage() {
     };
 
     fetchData();
-    loadReviewQueue();
   }, []);
 
   // Load session state from the server on mount (source of truth across devices)
@@ -188,7 +168,7 @@ export default function MurajaahPage() {
             setElapsedTime(0);
           } else {
             const elapsed = computeElapsedSeconds(data.session);
-            setElapsedTime(Math.min(1500, Math.max(0, elapsed)));
+            setElapsedTime(Math.min(data.session.duration * 60, Math.max(0, elapsed)));
             setIsPaused(data.session.isPaused);
           }
         } else {
@@ -277,12 +257,14 @@ export default function MurajaahPage() {
           const sessionsResponse = await apiCall("/revisions/sessions");
           const sessionsData = await sessionsResponse.json();
           setCompletedSessions(sessionsData.totalSessionsCompleted || 0);
-          await loadReviewQueue();
         } else {
           // Calculate elapsed time from the server's authoritative data
           const elapsed = computeElapsedSeconds(data.session);
-          setElapsedTime(Math.min(1500, Math.max(0, elapsed)));
+          setElapsedTime(Math.min(data.session.duration * 60, Math.max(0, elapsed)));
           setIsPaused(data.session.isPaused);
+          if (data.session.isPaused !== activeSession.isPaused || data.session.totalPauseDuration !== activeSession.totalPauseDuration) {
+            setActiveSession(data.session);
+          }
         }
       } catch (error) {
         console.error("Failed to check session status:", error);
@@ -326,7 +308,7 @@ export default function MurajaahPage() {
         body: JSON.stringify({
           type: type,
           identifier: identifier,
-          duration: 25 // 25 minutes
+          duration: Number(duration)
         }),
       });
 
@@ -348,31 +330,6 @@ export default function MurajaahPage() {
       }
     } catch (error) {
       console.error("Failed to start revision:", error);
-    }
-  };
-
-  const handleReviewFeedback = async (rating) => {
-    if (!pendingFeedback || loading) return;
-    setLoading(true);
-    setReviewError("");
-    try {
-      const response = await apiCall(`/revisions/${pendingFeedback._id}/feedback`, {
-        method: "POST",
-        body: JSON.stringify({ rating }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Failed to save feedback");
-      setPendingFeedback(null);
-      setReviewMessage(
-        data.nextReviewAt
-          ? `Review saved. Next review: ${new Date(data.nextReviewAt).toLocaleDateString("id-ID")}.`
-          : "Review saved."
-      );
-      await loadReviewQueue();
-    } catch (error) {
-      setReviewError(error.message);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -469,15 +426,10 @@ export default function MurajaahPage() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not delete this range");
-      const [memResponse, dueResponse] = await Promise.all([
-        apiCall("/memorized"),
-        apiCall("/revisions/due"),
-      ]);
+      const memResponse = await apiCall("/memorized");
       const memData = await memResponse.json();
-      const dueData = await dueResponse.json();
-      if (!memResponse.ok || !dueResponse.ok) throw new Error("Range deleted, but refreshing the list failed");
+      if (!memResponse.ok) throw new Error("Range deleted, but refreshing the list failed");
       setMemorizedData(memData);
-      setDueReviews(dueData.items || []);
     } catch (error) {
       setReviewError(error.message);
     } finally {
@@ -547,6 +499,7 @@ export default function MurajaahPage() {
         <SessionIndicators
           completedSessions={completedSessions}
           elapsedTime={elapsedTime}
+          duration={activeSession?.duration || Number(duration)}
         />
       </CardHeader>
 
@@ -556,69 +509,17 @@ export default function MurajaahPage() {
             {reviewError}
           </div>
         )}
-        {reviewMessage && (
-          <div className="rounded-md bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-300">
-            {reviewMessage}
-          </div>
-        )}
-
-        {pendingFeedback && (
-          <Card className="border-amber-500/50 bg-amber-500/5">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">How well did you remember it?</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Your answer schedules the next review. 1 means difficult; 5 means easy.
-              </p>
-              <div className="grid grid-cols-5 gap-2">
-                {[1, 2, 3, 4, 5].map((rating) => (
-                  <Button
-                    key={rating}
-                    variant={rating >= 4 ? "default" : "outline"}
-                    disabled={loading}
-                    onClick={() => handleReviewFeedback(rating)}
-                    aria-label={`Rate recall ${rating} out of 5`}
-                  >
-                    {rating}
-                  </Button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        <section className="space-y-3" aria-labelledby="review-today-title">
-          <div className="flex items-center justify-between">
-            <h2 id="review-today-title" className="text-lg font-semibold">Review today</h2>
-            <span className="text-sm text-muted-foreground">{dueReviews.length} due</span>
-          </div>
-          {dueReviews.length === 0 ? (
-            <p className="rounded-md border p-4 text-sm text-muted-foreground">
-              You are caught up. Newly memorized material will appear here when it is due.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {dueReviews.map((item) => (
-                <div key={item.surahNumber} className="flex items-center justify-between gap-4 rounded-md border p-3">
-                  <div>
-                    <p className="font-medium">{item.surahEnglishName || item.surahName}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Ayat {item.ranges.map((range) => `${range.fromVerse}-${range.toVerse}`).join(", ")}
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    disabled={Boolean(activeSession) || Boolean(pendingFeedback)}
-                    onClick={() => handleStartMurajaah("surah", item.surahNumber)}
-                  >
-                    Review
-                  </Button>
-                </div>
+        <div className="space-y-2">
+          <Label htmlFor="murajaah-duration">Durasi sesi</Label>
+          <Select value={duration} onValueChange={setDuration} disabled={Boolean(activeSession)}>
+            <SelectTrigger id="murajaah-duration"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {[10, 15, 20, 25].map((minutes) => (
+                <SelectItem key={minutes} value={String(minutes)}>{minutes} menit</SelectItem>
               ))}
-            </div>
-          )}
-        </section>
+            </SelectContent>
+          </Select>
+        </div>
 
         <Tabs defaultValue="surah" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
@@ -671,6 +572,7 @@ export default function MurajaahPage() {
                           });
                           const data = await response.json();
                           setIsPaused(data.session.isPaused);
+                          setActiveSession(data.session);
                         } else {
                           handleStartMurajaah("surah", surah.surahNumber);
                         }
@@ -809,6 +711,7 @@ export default function MurajaahPage() {
                           });
                           const data = await response.json();
                           setIsPaused(data.session.isPaused);
+                          setActiveSession(data.session);
                         } else {
                           handleStartMurajaah("juz", juz.juzNumber);
                         }

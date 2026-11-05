@@ -19,6 +19,8 @@ export default function MurajaahPlayer() {
   const [endVerse, setEndVerse] = useState("");
   const [juzNumber, setJuzNumber] = useState("1");
   const [activeSession, setActiveSession] = useState(null);
+  const [duration, setDuration] = useState("25");
+  const durationSeconds = (activeSession?.duration || Number(duration)) * 60;
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [completedSessions, setCompletedSessions] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -42,7 +44,7 @@ export default function MurajaahPlayer() {
           setActiveSession(data.session);
           setIsPaused(data.session.isPaused);
           const elapsed = computeElapsedSeconds(data.session);
-          setTimeElapsed(Math.min(1500, Math.max(0, elapsed)));
+          setTimeElapsed(Math.min(data.session.duration * 60, Math.max(0, elapsed)));
         } else {
           setActiveSession(null);
           setIsPaused(false);
@@ -195,13 +197,13 @@ export default function MurajaahPlayer() {
         
         setActiveSession(null);
         setIsPaused(false);
-        setTimeElapsed(1500); // Set to max duration when completed
+        setTimeElapsed(data.session.duration * 60);
         navigate('/murajaah');
       } else {
         // Sync authoritative state from the server
         setIsPaused(data.session.isPaused);
         const elapsed = computeElapsedSeconds(data.session);
-        setTimeElapsed(Math.min(1500, Math.max(0, elapsed)));
+        setTimeElapsed(Math.min(data.session.duration * 60, Math.max(0, elapsed)));
       }
     } catch (error) {
       console.error("Failed to check session status:", error);
@@ -211,8 +213,6 @@ export default function MurajaahPlayer() {
   // Start revision session
   const handleStartRevision = async () => {
     try {
-      // 25 minutes duration
-      const duration = 25;
       const response = await apiCall("/revisions/start", {
         method: "POST",
         headers: {
@@ -221,7 +221,7 @@ export default function MurajaahPlayer() {
         body: JSON.stringify({
           type,
           identifier: parseInt(type === 'juz' ? juzNumber : startSurah),
-          duration: duration
+          duration: Number(duration)
         }),
       });
 
@@ -272,13 +272,13 @@ export default function MurajaahPlayer() {
       const startTime = new Date(activeSession.startTime);
       const pauseDuration = activeSession.totalPauseDuration || 0;
       const initialElapsed = Math.floor((now - startTime) / 1000) - (pauseDuration * 60);
-      setTimeElapsed(Math.min(1500, Math.max(0, initialElapsed)));
+      setTimeElapsed(Math.min(durationSeconds, Math.max(0, initialElapsed)));
 
       interval = setInterval(() => {
         setTimeElapsed((prev) => {
-          if (prev >= 1500) {
+          if (prev >= durationSeconds) {
             clearInterval(interval);
-            return 1500;
+            return durationSeconds;
           }
           return prev + 1;
         });
@@ -370,6 +370,17 @@ export default function MurajaahPlayer() {
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <Label htmlFor="player-duration">Durasi sesi</Label>
+          <Select value={duration} onValueChange={setDuration} disabled={Boolean(activeSession)}>
+            <SelectTrigger id="player-duration"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {[10, 15, 20, 25].map((minutes) => (
+                <SelectItem key={minutes} value={String(minutes)}>{minutes} menit</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         {/* Timer Display */}
         <div className="relative w-32 h-32 mx-auto">
           <svg className="w-full h-full transform -rotate-90">
@@ -387,10 +398,10 @@ export default function MurajaahPlayer() {
                 r="60"
                 className={cn(
                   "fill-none transition-all duration-500",
-                  timeElapsed >= 1500 ? "stroke-green-500" : "stroke-primary"
+                  timeElapsed >= durationSeconds ? "stroke-green-500" : "stroke-primary"
                 )}
                 strokeWidth="8"
-                strokeDasharray={`${(timeElapsed / 1500) * 377} 377`}
+                strokeDasharray={`${(timeElapsed / durationSeconds) * 377} 377`}
               />
             )}
           </svg>

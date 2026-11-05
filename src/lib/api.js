@@ -36,7 +36,11 @@ async function refreshAccessToken() {
     });
 
     if (!response.ok) {
-      throw new Error("Failed to refresh token");
+      if (response.status === 401) {
+        clearAuth();
+        window.location.href = "/login";
+      }
+      throw new Error("Unable to refresh session");
     }
 
     const data = await response.json();
@@ -44,8 +48,6 @@ async function refreshAccessToken() {
     localStorage.setItem("refreshToken", data.refreshToken);
     return data.accessToken;
   } catch (error) {
-    clearAuth();
-    window.location.href = "/login";
     throw error;
   } finally {
     refreshPromise = null;
@@ -104,9 +106,7 @@ export const apiCall = async (endpoint, options = {}) => {
         const retryResponse = await fetch(url, retryOptions);
         return retryResponse;
       } catch (refreshError) {
-        // If refresh fails, redirect to login
-        window.location.href = "/login";
-        throw new Error("Failed to refresh token");
+        throw refreshError;
       }
     }
 
