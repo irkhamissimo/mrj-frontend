@@ -4,6 +4,11 @@ import { apiCall } from "@/lib/api";
 import { useTheme } from "@/contexts/ThemeContext";
 import LogoutButton from "./LogoutButton";
 
+const compactMenuLabels = {
+  '/vault': 'Setoran',
+  '/leaderboard': 'Peringkat',
+};
+
 export default function Layout({ children }) {
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
@@ -46,7 +51,7 @@ export default function Layout({ children }) {
   }, []);
 
   return (
-    <div className="min-h-screen relative pt-8 pb-24">
+    <div className="min-h-screen relative pt-8 pb-[calc(4.5rem+env(safe-area-inset-bottom))]">
       {/* Top header with title and logout button */}
       <header className="fixed top-0 inset-x-0 bg-white dark:bg-gray-900 shadow-sm z-10">
         <div className="max-w-2xl mx-auto px-4 py-2 flex justify-between items-center">
@@ -76,26 +81,30 @@ export default function Layout({ children }) {
       </header>
 
       {/* Main content area */}
-      <main className="max-w-2xl mx-auto px-4 py-8">
+      <main className="max-w-2xl mx-auto px-4 pt-8 pb-3">
         {children}
       </main>
 
-      {/* Bottom dock (MacOS-style) for menu items */}
-      <nav className="fixed bottom-4 inset-x-0 z-20 flex justify-center px-3">
-        <div className="w-full max-w-md bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-full py-2.5 px-3 shadow-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-around gap-1 sm:gap-2">
+      {/* Compact dock with clearance for mobile home indicators. */}
+      <nav aria-label="Navigasi utama" className="fixed bottom-[calc(0.5rem+env(safe-area-inset-bottom))] inset-x-0 z-20 flex justify-center px-2 sm:px-3">
+        <div className="flex w-full max-w-md items-center gap-0.5 rounded-2xl border border-gray-200 bg-gray-100/95 p-1 shadow-lg backdrop-blur-lg dark:border-gray-700 dark:bg-gray-800/95">
           {menuItems.map((item) => (
             <Link
               key={item._id}
               to={item.path}
-              className={`flex-1 flex flex-col items-center justify-center py-1 text-xs sm:text-sm font-medium whitespace-nowrap transition-transform transform hover:scale-110 ${
-                location.pathname === item.path ? "text-primary" : "text-gray-600 dark:text-gray-400"
+              title={item.title}
+              aria-label={item.title}
+              aria-current={location.pathname === item.path ? 'page' : undefined}
+              className={`flex h-11 min-w-0 flex-1 items-center justify-center rounded-xl px-1 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-2 sm:text-sm ${
+                location.pathname === item.path ? "bg-white text-gray-950 shadow-sm dark:bg-gray-700 dark:text-white" : "text-gray-600 hover:bg-white/60 dark:text-gray-400 dark:hover:bg-gray-700/60"
               }`}
             >
-              {item.title}
+              <span className="truncate sm:hidden">{compactMenuLabels[item.path] || item.title}</span>
+              <span className="hidden truncate sm:inline">{item.title}</span>
             </Link>
           ))}
         </div>
       </nav>
     </div>
   );
-} 
+}
